@@ -1,0 +1,24 @@
+{
+  "provider": "volcengine-seedream",
+  "tool": "genai_image.py (Volcengine Seedream API)",
+  "prompt_file": "candidates/fan.txt",
+  "source": "SeedreamSource.png (unaltered original, candidate 'fan')",
+  "source_sha256": "7f9f405eeecafe2a46d7c02216e4a6052d0331c0711d17ddfef40c518d095683",
+  "rejected": [
+    "candidates/hop.png (arrow reads as 'share/export')",
+    "candidates/pop.png (small tile vanishes at 32 px)"
+  ],
+  "packaging": {
+    "crop_box": [
+      115,
+      130,
+      935,
+      950
+    ],
+    "output_canvas_px": 1024,
+    "tile_px": 832,
+    "inset_px": 96,
+    "corner_radius_px": 188,
+    "method": "PIL crop + resize + rounded alpha mask on transparent canvas; icns by make_icon.to_icns. No AI regeneration."
+  }
+}

@@ -1,0 +1,10 @@
+/build/
+/.DS_Store
+.DS_Store
+__pycache__/
+*.pyc
+/icon/AppIcon.iconset/
+/icon/check.png
+/icon/candidates/sheet.png
+/icon/candidates/small.png
+/icon/candidates/*.log

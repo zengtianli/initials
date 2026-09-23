@@ -1,0 +1,392 @@
+import AppKit
+import ServiceManagement
+import UniformTypeIdentifiers
+
+/// One window for everything: permission, both sides' letter tables, options,
+/// Hammerspoon import and login item. Keyboard: ⌘1/⌘2 switch side, ⌘N add,
+/// ⌫ remove, ↩ change the selected app, ⌘W close.
+final class SettingsWindowController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate, NSWindowDelegate {
+    var onChange: ((Config) -> Void)?
+    var onRequestTrust: (() -> Void)?
+    var isTapRunning: () -> Bool = { false }
+
+    private(set) var config: Config
+    private var side: Side = .right
+    private var letters: [String] = []
+
+    private let sidePicker = NSSegmentedControl(labels: [T("右 ⌘ + 字母", "Right ⌘ + letter"),
+                                                        T("双击左 ⌘，再按字母", "Double-tap left ⌘, then a letter")],
+                                                trackingMode: .selectOne, target: nil, action: nil)
+    private let sideNote = NSTextField(wrappingLabelWithString: "")
+    private let enabledCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let shareCheck = NSButton(checkboxWithTitle: T("使用与右 ⌘ 相同的字母", "Use the same letters as right ⌘"), target: nil, action: nil)
+    private let hideCheck = NSButton(checkboxWithTitle: T("按下的 app 已在最前时，隐藏它（再按一次切回）", "If that app is already in front, hide it (press again to return)"), target: nil, action: nil)
+    private let cycleCheck = NSButton(checkboxWithTitle: T("未指定的字母：在名字以它开头、正在运行的 app 之间轮换", "Unpinned letters cycle through running apps whose name starts with it"), target: nil, action: nil)
+    private let table = BindingTableView()
+    private let tableScroll = NSScrollView()
+    private let addButton = NSButton()
+    private let removeButton = NSButton()
+    private let importButton = NSButton()
+    private let permissionLabel = NSTextField(labelWithString: "")
+    private let permissionButton = NSButton()
+    private let hammerspoonLabel = NSTextField(wrappingLabelWithString: "")
+    private let hammerspoonButton = NSButton()
+    private let loginCheck = NSButton(checkboxWithTitle: T("登录时打开 Initials", "Open Initials at login"), target: nil, action: nil)
+    private let message = NSTextField(labelWithString: "")
+
+    init(config: Config) {
+        self.config = config
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 600),
+                              styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: true)
+        window.title = T("Initials 设置", "Initials Settings")
+        window.isReleasedWhenClosed = false
+        super.init(window: window)
+        window.delegate = self
+        build()
+        reload()
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func present() {
+        NSApp.setActivationPolicy(.regular) // Dock and ⌘Tab while the window is open
+        refreshStatus()
+        window?.center()
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+        window?.makeFirstResponder(table)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+    }
+
+    func replaceConfig(_ config: Config) {
+        self.config = config
+        reload()
+    }
+
+    // MARK: Layout
+
+    private func build() {
+        guard let content = window?.contentView else { return }
+        sidePicker.target = self
+        sidePicker.action = #selector(sideChanged)
+        sidePicker.selectedSegment = 0
+        sideNote.font = .systemFont(ofSize: 12)
+        sideNote.textColor = .secondaryLabelColor
+        for (check, action) in [(enabledCheck, #selector(toggleEnabled)), (shareCheck, #selector(toggleShare)),
+                                (hideCheck, #selector(toggleHide)), (cycleCheck, #selector(toggleCycle)),
+                                (loginCheck, #selector(toggleLogin))] {
+            check.target = self
+            check.action = action
+        }
+
+        let letterColumn = NSTableColumn(identifier: .init("letter"))
+        letterColumn.title = T("字母", "Letter")
+        letterColumn.width = 60
+        let appColumn = NSTableColumn(identifier: .init("app"))
+        appColumn.title = "App"
+        appColumn.width = 200
+        let pathColumn = NSTableColumn(identifier: .init("path"))
+        pathColumn.title = T("位置", "Location")
+        pathColumn.width = 280
+        [letterColumn, appColumn, pathColumn].forEach(table.addTableColumn)
+        table.rowHeight = 26
+        table.style = .fullWidth
+        table.usesAlternatingRowBackgroundColors = true
+        table.dataSource = self
+        table.delegate = self
+        table.target = self
+        table.doubleAction = #selector(changeApp)
+        table.onDelete = { [weak self] in self?.removeBinding() }
+        table.onReturn = { [weak self] in self?.changeApp() }
+        tableScroll.documentView = table
+        tableScroll.hasVerticalScroller = true
+        tableScroll.borderType = .bezelBorder
+        tableScroll.heightAnchor.constraint(equalToConstant: 230).isActive = true
+
+        configure(addButton, T("添加…", "Add…"), #selector(addBinding))
+        addButton.keyEquivalent = "n"
+        addButton.keyEquivalentModifierMask = .command
+        configure(removeButton, T("移除", "Remove"), #selector(removeBinding))
+        configure(importButton, T("从 Hammerspoon 导入", "Import from Hammerspoon"), #selector(importHammerspoon))
+        configure(permissionButton, T("打开辅助功能设置…", "Open Accessibility Settings…"), #selector(openAccessibility))
+        configure(hammerspoonButton, "", #selector(toggleHammerspoon))
+        permissionLabel.font = .systemFont(ofSize: 13, weight: .medium)
+        hammerspoonLabel.font = .systemFont(ofSize: 12)
+        hammerspoonLabel.textColor = .secondaryLabelColor
+        message.font = .systemFont(ofSize: 12)
+        message.textColor = .secondaryLabelColor
+        message.lineBreakMode = .byTruncatingTail
+
+        let permissionRow = NSStackView(views: [permissionLabel, NSView(), permissionButton])
+        let hammerspoonRow = NSStackView(views: [hammerspoonLabel, hammerspoonButton])
+        hammerspoonRow.alignment = .centerY
+        let buttons = NSStackView(views: [addButton, removeButton, NSView(), importButton])
+        let footer = NSStackView(views: [loginCheck, NSView(), message])
+
+        let stack = NSStackView(views: [permissionRow, hammerspoonRow, separator(), sidePicker, sideNote, enabledCheck, shareCheck,
+                                        tableScroll, buttons, hideCheck, cycleCheck, separator(), footer])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.setCustomSpacing(4, after: sidePicker)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(stack)
+        for view in [permissionRow, hammerspoonRow, tableScroll, buttons, footer, sideNote] {
+            view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
+        for view in stack.arrangedSubviews where view is NSBox {
+            view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
+        }
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 18),
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
+            stack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16),
+        ])
+    }
+
+    private func configure(_ button: NSButton, _ title: String, _ action: Selector) {
+        button.title = title
+        button.bezelStyle = .rounded
+        button.target = self
+        button.action = action
+    }
+
+    private func separator() -> NSBox {
+        let box = NSBox()
+        box.boxType = .separator
+        return box
+    }
+
+    // MARK: State
+
+    private func reload() {
+        let s = config.side(side)
+        sidePicker.selectedSegment = side == .right ? 0 : 1
+        enabledCheck.title = side == .right ? T("启用右 ⌘ + 字母", "Enable right ⌘ + letter")
+                                            : T("启用双击左 ⌘", "Enable double-tap of left ⌘")
+        sideNote.stringValue = side == .right
+            ? T("按住右边的 ⌘ 再按字母，直接切到对应 app。左 ⌘ 的 ⌘C、⌘V 等快捷键不受影响；右 ⌘ 同时按 ⇧⌥⌃ 时照常放行。",
+                "Hold the right ⌘ and press a letter to jump to its app. Left ⌘ shortcuts (⌘C, ⌘V…) are untouched; right ⌘ with ⇧⌥⌃ passes through.")
+            : T("快速按两下左 ⌘，屏幕中间出现字母面板，再按字母切换；Esc 或 4 秒内不按键会自动关闭。面板不会抢走当前窗口的焦点。",
+                "Tap left ⌘ twice quickly to show the letter panel, then press a letter; Esc or 4 seconds without a key closes it. The panel never takes focus.")
+        enabledCheck.state = s.enabled ? .on : .off
+        shareCheck.isHidden = side == .right
+        shareCheck.state = s.useRightBindings ? .on : .off
+        hideCheck.state = s.hideIfFrontmost ? .on : .off
+        cycleCheck.state = s.cycleUnbound ? .on : .off
+        let editable = !(side == .left && s.useRightBindings)
+        addButton.isEnabled = editable
+        removeButton.isEnabled = editable
+        importButton.isEnabled = editable && FileManager.default.fileExists(atPath: Hammerspoon.keymaps.path)
+        importButton.isHidden = !FileManager.default.fileExists(atPath: Hammerspoon.keymaps.path)
+        table.isEnabled = editable
+        letters = config.bindings(for: side).keys.sorted()
+        table.reloadData()
+        loginCheck.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        refreshStatus()
+    }
+
+    func refreshStatus() {
+        let trusted = EventTap.trusted
+        permissionLabel.stringValue = trusted
+            ? (isTapRunning() ? T("✓ 已授权辅助功能，正在工作", "✓ Accessibility granted — active")
+                              : T("✓ 已授权辅助功能", "✓ Accessibility granted"))
+            : T("⚠︎ 需要授权“辅助功能”才能接收右 ⌘ 与左 ⌘ 按键", "⚠︎ Allow Accessibility so Initials can receive ⌘ keys")
+        permissionLabel.textColor = trusted ? .systemGreen : .systemOrange
+        permissionButton.isHidden = trusted
+        let hasMacKit = FileManager.default.fileExists(atPath: Hammerspoon.mackitConfigDirectory.path)
+        let rcmdOn = Hammerspoon.rcmdEnabled
+        hammerspoonLabel.superview?.isHidden = !hasMacKit
+        hammerspoonLabel.stringValue = rcmdOn
+            ? T("Hammerspoon 的 rcmd 也在处理右 ⌘ + 字母。确认 Initials 可用后关掉它，避免两边同时处理。",
+                "Hammerspoon's rcmd also handles right ⌘ + letter. Once Initials works, turn it off so only one tool handles the keys.")
+            : T("Hammerspoon 的 rcmd 已关闭，由 Initials 处理。", "Hammerspoon's rcmd is off; Initials handles the keys.")
+        hammerspoonButton.title = rcmdOn ? T("关闭 Hammerspoon rcmd", "Turn off Hammerspoon rcmd")
+                                         : T("恢复 Hammerspoon rcmd", "Restore Hammerspoon rcmd")
+    }
+
+    private func commit(_ note: String? = nil) {
+        do {
+            try ConfigStore.save(config)
+            message.stringValue = note ?? T("已保存", "Saved")
+            onChange?(config)
+        } catch {
+            message.stringValue = error.localizedDescription
+        }
+        reload()
+    }
+
+    // MARK: Actions
+
+    @objc private func sideChanged() {
+        side = sidePicker.selectedSegment == 0 ? .right : .left
+        reload()
+    }
+
+    func selectSide(_ newSide: Side) {
+        side = newSide
+        reload()
+    }
+
+    @objc private func toggleEnabled() { config.update(side) { $0.enabled = enabledCheck.state == .on }; commit() }
+    @objc private func toggleShare() { config.update(.left) { $0.useRightBindings = shareCheck.state == .on }; commit() }
+    @objc private func toggleHide() { config.update(side) { $0.hideIfFrontmost = hideCheck.state == .on }; commit() }
+    @objc private func toggleCycle() { config.update(side) { $0.cycleUnbound = cycleCheck.state == .on }; commit() }
+
+    @objc private func addBinding() { chooseApp(for: nil) }
+
+    @objc private func changeApp() {
+        guard table.selectedRow >= 0 else { return }
+        chooseApp(for: letters[table.selectedRow])
+    }
+
+    @objc func removeBinding() {
+        guard table.selectedRow >= 0, table.isEnabled else { return }
+        let letter = letters[table.selectedRow]
+        config.update(side) { $0.bindings[letter] = nil }
+        commit(T("已移除 \(letter.uppercased())", "Removed \(letter.uppercased())"))
+    }
+
+    /// One dialog: pick the app, choose the letter in the panel's accessory view.
+    private func chooseApp(for existing: String?) {
+        guard let window else { return }
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = T("指定", "Pin")
+        panel.message = T("选择要指定给字母的 app", "Choose the app for this letter")
+        let popup = NSPopUpButton()
+        let taken = config.side(side).bindings
+        for scalar in UnicodeScalar("a").value...UnicodeScalar("z").value {
+            let letter = String(UnicodeScalar(scalar)!)
+            popup.addItem(withTitle: letter.uppercased() + (taken[letter].map { "  (\($0.name))" } ?? ""))
+            popup.lastItem?.representedObject = letter
+        }
+        let preset = existing ?? (UnicodeScalar("a").value...UnicodeScalar("z").value)
+            .map { String(UnicodeScalar($0)!) }.first { taken[$0] == nil } ?? "a"
+        popup.selectItem(at: Int(UnicodeScalar(preset)!.value - UnicodeScalar("a").value))
+        let label = NSTextField(labelWithString: T("字母：", "Letter:"))
+        let accessory = NSStackView(views: [label, popup])
+        accessory.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        panel.accessoryView = accessory
+        panel.isAccessoryViewDisclosed = true
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .OK, let url = panel.url, let binding = AppCatalog.binding(for: url),
+                  let letter = popup.selectedItem?.representedObject as? String else { return }
+            self.config.update(self.side) { s in
+                if let existing, existing != letter { s.bindings[existing] = nil }
+                s.bindings[letter] = binding
+            }
+            self.commit(T("\(letter.uppercased()) → \(binding.name)", "\(letter.uppercased()) → \(binding.name)"))
+        }
+    }
+
+    @objc private func importHammerspoon() {
+        do {
+            let imported = try Hammerspoon.importLetters()
+            config.update(side) { s in s.bindings.merge(imported.bindings) { _, new in new } }
+            var note = T("已导入 \(imported.bindings.count) 个字母", "Imported \(imported.bindings.count) letters")
+            if !imported.unresolved.isEmpty {
+                note += T("；未找到：", "; not found: ") + imported.unresolved.map { "\($0.letter)=\($0.app)" }.joined(separator: ", ")
+            }
+            commit(note)
+        } catch {
+            message.stringValue = error.localizedDescription
+        }
+    }
+
+    @objc private func toggleHammerspoon() {
+        do {
+            message.stringValue = try Hammerspoon.setRcmd(enabled: !Hammerspoon.rcmdEnabled)
+        } catch {
+            message.stringValue = error.localizedDescription
+        }
+        refreshStatus()
+    }
+
+    @objc private func openAccessibility() {
+        onRequestTrust?()
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    @objc private func toggleLogin() {
+        do {
+            if loginCheck.state == .on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+        } catch {
+            message.stringValue = error.localizedDescription
+        }
+        loginCheck.state = SMAppService.mainApp.status == .enabled ? .on : .off
+    }
+
+    // MARK: Table
+
+    func numberOfRows(in tableView: NSTableView) -> Int { letters.count }
+
+    func tableView(_ tableView: NSTableView, viewFor column: NSTableColumn?, row: Int) -> NSView? {
+        guard let id = column?.identifier, let binding = config.bindings(for: side)[letters[row]] else { return nil }
+        let cell = NSTableCellView()
+        let text = NSTextField(labelWithString: "")
+        text.lineBreakMode = .byTruncatingMiddle
+        text.translatesAutoresizingMaskIntoConstraints = false
+        cell.addSubview(text)
+        cell.textField = text
+        var leading = cell.leadingAnchor
+        switch id.rawValue {
+        case "letter":
+            text.stringValue = letters[row].uppercased()
+            text.font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
+        case "app":
+            let icon = NSImageView()
+            icon.image = AppCatalog.url(for: binding).map { NSWorkspace.shared.icon(forFile: $0.path) }
+            icon.translatesAutoresizingMaskIntoConstraints = false
+            cell.addSubview(icon)
+            NSLayoutConstraint.activate([
+                icon.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 2),
+                icon.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+                icon.widthAnchor.constraint(equalToConstant: 18), icon.heightAnchor.constraint(equalToConstant: 18),
+            ])
+            leading = icon.trailingAnchor
+            text.stringValue = binding.name
+        default:
+            let path = AppCatalog.url(for: binding)?.path ?? T("未找到", "Not found")
+            text.stringValue = path
+            text.textColor = AppCatalog.url(for: binding) == nil ? .systemRed : .secondaryLabelColor
+        }
+        NSLayoutConstraint.activate([
+            text.leadingAnchor.constraint(equalTo: leading, constant: 6),
+            text.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -4),
+            text.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+        ])
+        return cell
+    }
+
+    // MARK: Offscreen snapshot
+
+    func snapshot(side: Side, to url: URL, appearance: NSAppearance?) throws {
+        window?.appearance = appearance
+        selectSide(side)
+        guard let view = window?.contentView else { return }
+        view.layoutSubtreeIfNeeded()
+        view.displayIfNeeded()
+        try writeRetinaPNG(of: view, to: url)
+    }
+}
+
+/// ⌫ removes the selected letter; ↩ changes its app.
+final class BindingTableView: NSTableView {
+    var onDelete: (() -> Void)?
+    var onReturn: (() -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        let plain = event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty
+        if plain && (event.keyCode == 51 || event.keyCode == 117) { onDelete?() }
+        else if plain && (event.keyCode == 36 || event.keyCode == 76) { onReturn?() }
+        else { super.keyDown(with: event) }
+    }
+}
