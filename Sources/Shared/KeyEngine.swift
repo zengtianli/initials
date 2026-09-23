@@ -14,10 +14,29 @@ enum KeyOutput: Equatable {
     case swallow
     /// Swallow the key and run the letter's action for that side.
     case act(Side, String)
-    /// A double-tap of left ⌘ finished: show the picker (the key event passes).
-    case openPicker
+    /// A double-tap of that side's ⌘ finished: show its picker (the key event passes).
+    case openPicker(Side)
     /// The picker is open and a key closed it (Esc swallows; other keys pass).
     case closePicker(swallow: Bool)
+}
+
+/// How one physical ⌘ key triggers. Both ⌘ keys can use either or both.
+struct Trigger: Equatable {
+    /// Hold this ⌘ and press a letter.
+    var hold = false
+    /// Tap this ⌘ twice quickly, then press a letter in the picker.
+    var doubleTap = false
+    /// Hold intercepts every letter (unpinned ones cycle); otherwise only `pinned`.
+    var anyLetter = false
+    /// Bit n set = letter "a"+n is pinned.
+    var pinned: UInt32 = 0
+
+    static func mask(_ letters: some Sequence<String>) -> UInt32 {
+        letters.reduce(0) { m, l in
+            guard let v = l.unicodeScalars.first?.value, v >= 97, v <= 122 else { return m }
+            return m | (1 << (v - 97))
+        }
+    }
 }
 
 /// Pure, allocation-free decision logic for the event tap. Runs inside the tap
@@ -28,30 +47,69 @@ struct KeyEngine {
     static let leftCommandDevice: UInt64 = 0x08, rightCommandDevice: UInt64 = 0x10
     static let escape: UInt16 = 53
 
-    var letters: [UInt16: String] = KeyEngine.ansiLetters
-    var rightEnabled = true
-    var leftEnabled = true
+    var letters: [UInt16: String] = KeyEngine.ansiLetters { didSet { letterBits = Self.bits(letters) } }
+    /// Key code → letter bit (0 = not a letter), so the common path never touches strings.
+    private var letterBits = KeyEngine.bits(KeyEngine.ansiLetters)
+    /// Defaults match a fresh config: right ⌘ holds, left ⌘ double-taps.
+    var right = Trigger(hold: true, anyLetter: true)
+    var left = Trigger(doubleTap: true)
     var doubleTap = 0.3
     var pickerOpen = false
+    private(set) var pickerSide = Side.left
 
     private var swallowedUps = Set<UInt16>()
-    // Left ⌘ double-tap tracking.
-    private var leftHeld = false
-    private var tapDownAt: Double?
-    private var firstTapUpAt: Double?
-    private var interrupted = false
+    private var rightTap = TapState(), leftTap = TapState()
+
+    private struct TapState {
+        var held = false
+        var downAt: Double?
+        var firstUpAt: Double?
+        var interrupted = false
+
+        mutating func interrupt() {
+            interrupted = true
+            firstUpAt = nil
+        }
+
+        /// One ⌘ key's double-tap tracking; true when the second quick tap ends.
+        /// Any other modifier, key or click in between cancels.
+        mutating func changed(down: Bool, others: Bool, time: Double, window: Double) -> Bool {
+            defer { held = down }
+            if others {
+                interrupt()
+                return false
+            }
+            if down && !held {
+                if let first = firstUpAt, time - first > window { firstUpAt = nil }
+                downAt = time
+                interrupted = false
+            } else if !down && held {
+                defer { downAt = nil }
+                guard let start = downAt, !interrupted, time - start <= window else {
+                    firstUpAt = nil
+                    return false
+                }
+                if firstUpAt != nil {
+                    firstUpAt = nil
+                    return true
+                }
+                firstUpAt = time
+            }
+            return false
+        }
+    }
 
     mutating func handle(_ input: KeyInput) -> KeyOutput {
         switch input {
         case let .keyDown(code, flags, isRepeat, _):
-            interrupted = true
-            firstTapUpAt = nil
+            rightTap.interrupt()
+            leftTap.interrupt()
             if pickerOpen {
                 pickerOpen = false
                 let mods = flags & (Self.command | Self.control | Self.option)
                 if mods == 0, let letter = letters[code] {
                     swallowedUps.insert(code)
-                    return isRepeat ? .swallow : .act(.left, letter)
+                    return isRepeat ? .swallow : .act(pickerSide, letter)
                 }
                 if code == Self.escape {
                     swallowedUps.insert(code)
@@ -59,53 +117,44 @@ struct KeyEngine {
                 }
                 return .closePicker(swallow: false)
             }
-            guard rightEnabled, flags & Self.rightCommandDevice != 0,
-                  flags & (Self.shift | Self.control | Self.option) == 0,
-                  let letter = letters[code] else { return .pass }
+            guard flags & (Self.shift | Self.control | Self.option) == 0, code < 128 else { return .pass }
+            let bit = letterBits[Int(code)]
+            guard bit != 0 else { return .pass }
+            let side: Side
+            if right.hold, flags & Self.rightCommandDevice != 0, right.anyLetter || right.pinned & bit != 0 { side = .right }
+            else if left.hold, flags & Self.leftCommandDevice != 0, left.anyLetter || left.pinned & bit != 0 { side = .left }
+            else { return .pass }
             swallowedUps.insert(code)
-            return isRepeat ? .swallow : .act(.right, letter)
+            return isRepeat ? .swallow : .act(side, letters[code]!)
 
         case let .keyUp(code, _):
             return swallowedUps.remove(code) != nil ? .swallow : .pass
 
         case .mouseDown:
-            interrupted = true
-            firstTapUpAt = nil
+            rightTap.interrupt()
+            leftTap.interrupt()
             return .pass
 
         case let .flagsChanged(flags, time):
-            return leftCommandChanged(flags: flags, time: time)
+            let mods = flags & (Self.shift | Self.control | Self.option)
+            let r = flags & Self.rightCommandDevice != 0, l = flags & Self.leftCommandDevice != 0
+            // Always track press state so turning a trigger on mid-press never misfires.
+            let rightDone = rightTap.changed(down: r, others: mods != 0 || l, time: time, window: doubleTap)
+            let leftDone = leftTap.changed(down: l, others: mods != 0 || r, time: time, window: doubleTap)
+            let side: Side
+            if rightDone && right.doubleTap { side = .right }
+            else if leftDone && left.doubleTap { side = .left }
+            else { return .pass }
+            pickerOpen = true
+            pickerSide = side
+            return .openPicker(side)
         }
     }
 
-    private mutating func leftCommandChanged(flags: UInt64, time: Double) -> KeyOutput {
-        let others = flags & (Self.shift | Self.control | Self.option | Self.rightCommandDevice)
-        let down = flags & Self.leftCommandDevice != 0
-        defer { leftHeld = down }
-        guard leftEnabled else { return .pass }
-        if others != 0 {
-            interrupted = true
-            firstTapUpAt = nil
-            return .pass
-        }
-        if down && !leftHeld {
-            if let first = firstTapUpAt, time - first > doubleTap { firstTapUpAt = nil }
-            tapDownAt = time
-            interrupted = false
-        } else if !down && leftHeld {
-            defer { tapDownAt = nil }
-            guard let start = tapDownAt, !interrupted, time - start <= doubleTap else {
-                firstTapUpAt = nil
-                return .pass
-            }
-            if firstTapUpAt != nil {
-                firstTapUpAt = nil
-                pickerOpen = true
-                return .openPicker
-            }
-            firstTapUpAt = time
-        }
-        return .pass
+    private static func bits(_ letters: [UInt16: String]) -> [UInt32] {
+        var table = [UInt32](repeating: 0, count: 128)
+        for (code, letter) in letters where code < 128 { table[Int(code)] = Trigger.mask([letter]) }
+        return table
     }
 
     /// US ANSI key codes; the app replaces this with the current keyboard layout.

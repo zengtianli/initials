@@ -1,6 +1,6 @@
 import AppKit
 
-/// Shown after a double-tap of left ⌘: every letter that currently does
+/// Shown after a double-tap of either ⌘ (when that side allows it): every letter that currently does
 /// something, with its app. It never becomes key or active, so the app you are
 /// in keeps focus; the event tap reads the next key.
 final class PickerPanel: NSPanel {

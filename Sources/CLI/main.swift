@@ -2,7 +2,7 @@ import Foundation
 
 /// `initials` — edits the same config the app watches; the running app picks up
 /// changes within a moment. Exit codes: 0 ok, 1 not found, 2 usage or error.
-let version = "1.0.0"
+let version = "1.1.0"
 
 func fail(_ message: String, code: Int32 = 2) -> Never {
     FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
@@ -10,13 +10,15 @@ func fail(_ message: String, code: Int32 = 2) -> Never {
 }
 
 let usage = """
-initials — pin apps to letters; right ⌘ + letter or double-tap left ⌘ then a letter
+initials — pin apps to letters; hold either ⌘ + letter, or double-tap a ⌘ then a letter
 
   initials list [--side right|left] [--json]     show letters and their apps
   initials set <letter> <app> [--side right|left] pin an app (name, bundle id or /path/To.app)
   initials unset <letter> [--side right|left]     remove a letter
   initials import [--from keymaps.lua] [--side …] import Hammerspoon right_command letters
   initials enable|disable [right|left|all]         turn a side on or off
+  initials hold on|off [--side right|left]         hold that ⌘ + letter (left: pinned letters only)
+  initials tap on|off [--side right|left]          double-tap that ⌘ for the letter panel
   initials share on|off                            left ⌘ uses the right ⌘ letters
   initials status [--json]                         is the app running and intercepting?
   initials hammerspoon rcmd on|off                 switch MacKit's Hammerspoon rcmd
@@ -78,7 +80,8 @@ case "list":
         for s in sides {
             let c = config.side(s)
             out[s.rawValue] = [
-                "enabled": c.enabled, "hideIfFrontmost": c.hideIfFrontmost, "cycleUnbound": c.cycleUnbound,
+                "enabled": c.enabled, "hold": c.hold, "doubleTap": c.doubleTap,
+                "hideIfFrontmost": c.hideIfFrontmost, "cycleUnbound": c.cycleUnbound,
                 "useRightBindings": s == .left ? c.useRightBindings : false,
                 "bindings": config.bindings(for: s).mapValues { b -> [String: Any] in ["name": b.name, "bundleID": b.bundleID as Any? ?? NSNull(), "path": b.path as Any? ?? NSNull()] },
             ]
@@ -87,9 +90,13 @@ case "list":
     } else {
         for s in sides {
             let c = config.side(s)
-            let title = s == .right ? "right ⌘ + letter" : "double-tap left ⌘, then letter"
+            let t = config.trigger(for: s)
+            let ways = [t.hold ? "hold + letter" : nil, t.doubleTap ? "double-tap" : nil].compactMap { $0 }
             let shared = s == .left && c.useRightBindings ? " (same letters as right ⌘)" : ""
-            print("\(title): \(c.enabled ? "on" : "off")\(shared)")
+            print("\(s.rawValue) ⌘: \(ways.isEmpty ? "off" : ways.joined(separator: " + "))\(shared)")
+            for conflict in s == .left ? config.leftHoldConflicts() : [] {
+                print("  warning: holding left ⌘ takes over ⌘\(conflict.letter.uppercased()) (\(conflict.shortcut))")
+            }
             let bindings = config.bindings(for: s)
             if bindings.isEmpty { print("  (no pinned letters)") }
             for letter in bindings.keys.sorted() {
@@ -143,6 +150,19 @@ case "enable", "disable":
     }
     save(config)
     print("\(which): \(on ? "on" : "off")")
+
+case "hold", "tap":
+    guard let value = rest.first, ["on", "off"].contains(value) else { fail("usage: initials \(command) on|off [--side right|left]") }
+    var config = loadConfig()
+    config.update(side) { s in
+        if !s.enabled { s.hold = false; s.doubleTap = false; s.enabled = true }
+        if command == "hold" { s.hold = value == "on" } else { s.doubleTap = value == "on" }
+    }
+    save(config)
+    print("\(side.rawValue) ⌘ \(command == "hold" ? "hold + letter" : "double-tap"): \(value)")
+    for conflict in config.leftHoldConflicts() where side == .left {
+        print("warning: holding left ⌘ takes over ⌘\(conflict.letter.uppercased()) (\(conflict.shortcut))")
+    }
 
 case "share":
     guard let value = rest.first, ["on", "off"].contains(value) else { fail("usage: initials share on|off") }

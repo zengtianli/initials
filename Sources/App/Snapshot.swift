@@ -1,6 +1,6 @@
 import AppKit
 
-/// `--snapshot out.png --settings right|left [--dark]` or `--snapshot out.png --picker [--dark]`:
+/// `--snapshot out.png --settings right|left [--dark]` or `--snapshot out.png --picker [--right] [--dark]`:
 /// renders offscreen from the config in `$INITIALS_SUPPORT_DIR` and exits. Nothing is
 /// shown, activated, intercepted or saved.
 enum Snapshot {
@@ -15,7 +15,8 @@ enum Snapshot {
                 try controller.snapshot(side: side, to: url, appearance: appearance)
             } else {
                 let panel = PickerPanel()
-                try panel.snapshot(PickerPanel.entries(config: config, side: .left, running: Launcher.runningApps()),
+                let side: Side = args.contains("--right") ? .right : .left
+                try panel.snapshot(PickerPanel.entries(config: config, side: side, running: Launcher.runningApps()),
                                    to: url, appearance: appearance)
             }
         } catch {

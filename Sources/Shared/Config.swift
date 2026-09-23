@@ -1,7 +1,7 @@
 import Foundation
 
-/// Which modifier a table belongs to: right ⌘ + letter, or a double-tap of left ⌘
-/// followed by a letter.
+/// Which physical ⌘ key a table belongs to. Each can be held with a letter,
+/// double-tapped for the letter picker, or both.
 enum Side: String, Codable, CaseIterable {
     case right, left
 }
@@ -16,6 +16,11 @@ struct Binding: Codable, Equatable {
 
 struct SideConfig: Codable, Equatable {
     var enabled = true
+    /// Hold this ⌘ and press a letter. On the left ⌘ only pinned letters are taken,
+    /// so ⌘C, ⌘V and the rest keep working unless you pin those letters.
+    var hold = true
+    /// Tap this ⌘ twice quickly to show the letter picker.
+    var doubleTap = false
     /// Pinned letters, keyed by lowercase a–z.
     var bindings: [String: Binding] = [:]
     /// Pressing the key of the app already in front hides it (press again to return).
@@ -27,9 +32,18 @@ struct SideConfig: Codable, Equatable {
 
     init() {}
 
+    init(hold: Bool, doubleTap: Bool) {
+        self.hold = hold
+        self.doubleTap = doubleTap
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        // Files from 1.0 have no trigger fields: right ⌘ held, left ⌘ double-tapped.
+        let isLeft = decoder.codingPath.last?.stringValue == Side.left.rawValue
         enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        hold = try c.decodeIfPresent(Bool.self, forKey: .hold) ?? !isLeft
+        doubleTap = try c.decodeIfPresent(Bool.self, forKey: .doubleTap) ?? isLeft
         bindings = try c.decodeIfPresent([String: Binding].self, forKey: .bindings) ?? [:]
         hideIfFrontmost = try c.decodeIfPresent(Bool.self, forKey: .hideIfFrontmost) ?? true
         cycleUnbound = try c.decodeIfPresent(Bool.self, forKey: .cycleUnbound) ?? true
@@ -41,7 +55,7 @@ struct Config: Codable, Equatable {
     var version = 1
     var right = SideConfig()
     var left: SideConfig = {
-        var s = SideConfig()
+        var s = SideConfig(hold: false, doubleTap: true)
         s.useRightBindings = true
         return s
     }()
@@ -72,6 +86,29 @@ struct Config: Codable, Equatable {
     mutating func update(_ side: Side, _ change: (inout SideConfig) -> Void) {
         if side == .right { change(&right) } else { change(&left) }
     }
+
+    /// What the event tap needs for one ⌘ key. Holding left ⌘ only ever takes pinned
+    /// letters: cycling every letter there would swallow ⌘C, ⌘V and friends.
+    func trigger(for side: Side) -> Trigger {
+        let s = self.side(side)
+        return Trigger(hold: s.enabled && s.hold, doubleTap: s.enabled && s.doubleTap,
+                       anyLetter: side == .right && s.cycleUnbound,
+                       pinned: Trigger.mask(bindings(for: side).keys))
+    }
+
+    /// Pinned letters that holding left ⌘ would take away from common shortcuts.
+    func leftHoldConflicts() -> [(letter: String, shortcut: String)] {
+        guard left.enabled && left.hold else { return [] }
+        let pinned = bindings(for: .left)
+        return Self.commonShortcuts.filter { pinned[$0.letter] != nil }
+    }
+
+    static let commonShortcuts: [(letter: String, shortcut: String)] = [
+        ("a", T("全选", "Select All")), ("c", T("拷贝", "Copy")), ("f", T("查找", "Find")), ("h", T("隐藏", "Hide")),
+        ("m", T("最小化", "Minimize")), ("n", T("新建", "New")), ("o", T("打开", "Open")), ("p", T("打印", "Print")),
+        ("q", T("退出", "Quit")), ("r", T("刷新", "Reload")), ("s", T("保存", "Save")), ("t", T("新标签页", "New Tab")),
+        ("v", T("粘贴", "Paste")), ("w", T("关闭窗口", "Close")), ("x", T("剪切", "Cut")), ("z", T("撤销", "Undo")),
+    ]
 
     static func normalizedLetter(_ raw: String) -> String? {
         let s = raw.trimmingCharacters(in: .whitespaces).lowercased()
@@ -119,11 +156,14 @@ enum MacKitKeys {
         guard ProcessInfo.processInfo.environment["INITIALS_SUPPORT_DIR"] == nil,
               FileManager.default.fileExists(atPath: Hammerspoon.mackitConfigDirectory.path) else { return }
         var rows: [[String: String]] = []
-        for side in Side.allCases where config.side(side).enabled {
-            let prefix = side == .right ? "right-cmd+" : "double-left-cmd "
-            for (letter, binding) in config.bindings(for: side).sorted(by: { $0.key < $1.key }) {
-                rows.append(["component": "initials", "mode": "global", "key": prefix + letter,
-                             "description": "切换 " + binding.name, "source": Paths.config.path])
+        for side in Side.allCases {
+            let trigger = config.trigger(for: side)
+            let prefixes = (trigger.hold ? ["\(side.rawValue)-cmd+"] : []) + (trigger.doubleTap ? ["double-\(side.rawValue)-cmd "] : [])
+            for prefix in prefixes {
+                for (letter, binding) in config.bindings(for: side).sorted(by: { $0.key < $1.key }) {
+                    rows.append(["component": "initials", "mode": "global", "key": prefix + letter,
+                                 "description": "切换 " + binding.name, "source": Paths.config.path])
+                }
             }
         }
         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)

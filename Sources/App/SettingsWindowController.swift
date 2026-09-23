@@ -14,11 +14,12 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private var side: Side = .right
     private var letters: [String] = []
 
-    private let sidePicker = NSSegmentedControl(labels: [T("右 ⌘ + 字母", "Right ⌘ + letter"),
-                                                        T("双击左 ⌘，再按字母", "Double-tap left ⌘, then a letter")],
+    private let sidePicker = NSSegmentedControl(labels: [T("右 ⌘", "Right ⌘"), T("左 ⌘", "Left ⌘")],
                                                 trackingMode: .selectOne, target: nil, action: nil)
     private let sideNote = NSTextField(wrappingLabelWithString: "")
-    private let enabledCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let holdCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let tapCheck = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let conflictLabel = NSTextField(wrappingLabelWithString: "")
     private let shareCheck = NSButton(checkboxWithTitle: T("使用与右 ⌘ 相同的字母", "Use the same letters as right ⌘"), target: nil, action: nil)
     private let hideCheck = NSButton(checkboxWithTitle: T("按下的 app 已在最前时，隐藏它（再按一次切回）", "If that app is already in front, hide it (press again to return)"), target: nil, action: nil)
     private let cycleCheck = NSButton(checkboxWithTitle: T("未指定的字母：在名字以它开头、正在运行的 app 之间轮换", "Unpinned letters cycle through running apps whose name starts with it"), target: nil, action: nil)
@@ -36,7 +37,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
 
     init(config: Config) {
         self.config = config
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 600),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 640),
                               styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: true)
         window.title = T("Initials 设置", "Initials Settings")
         window.isReleasedWhenClosed = false
@@ -75,7 +76,9 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         sidePicker.selectedSegment = 0
         sideNote.font = .systemFont(ofSize: 12)
         sideNote.textColor = .secondaryLabelColor
-        for (check, action) in [(enabledCheck, #selector(toggleEnabled)), (shareCheck, #selector(toggleShare)),
+        conflictLabel.font = .systemFont(ofSize: 12)
+        conflictLabel.textColor = .systemOrange
+        for (check, action) in [(holdCheck, #selector(toggleHold)), (tapCheck, #selector(toggleTap)), (shareCheck, #selector(toggleShare)),
                                 (hideCheck, #selector(toggleHide)), (cycleCheck, #selector(toggleCycle)),
                                 (loginCheck, #selector(toggleLogin))] {
             check.target = self
@@ -104,7 +107,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         tableScroll.documentView = table
         tableScroll.hasVerticalScroller = true
         tableScroll.borderType = .bezelBorder
-        tableScroll.heightAnchor.constraint(equalToConstant: 230).isActive = true
+        tableScroll.heightAnchor.constraint(equalToConstant: 210).isActive = true
 
         configure(addButton, T("添加…", "Add…"), #selector(addBinding))
         addButton.keyEquivalent = "n"
@@ -120,27 +123,28 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         message.textColor = .secondaryLabelColor
         message.lineBreakMode = .byTruncatingTail
 
-        let permissionRow = NSStackView(views: [permissionLabel, NSView(), permissionButton])
+        let permissionRow = NSStackView(views: [permissionLabel, spacer(), permissionButton])
         let hammerspoonRow = NSStackView(views: [hammerspoonLabel, hammerspoonButton])
         hammerspoonRow.alignment = .centerY
-        let buttons = NSStackView(views: [addButton, removeButton, NSView(), importButton])
-        let footer = NSStackView(views: [loginCheck, NSView(), message])
+        let buttons = NSStackView(views: [addButton, removeButton, spacer(), importButton])
+        let footer = NSStackView(views: [loginCheck, spacer(), message])
 
-        let stack = NSStackView(views: [permissionRow, hammerspoonRow, separator(), sidePicker, sideNote, enabledCheck, shareCheck,
-                                        tableScroll, buttons, hideCheck, cycleCheck, separator(), footer])
+        let stack = NSStackView(views: [permissionRow, hammerspoonRow, separator(), sidePicker, sideNote, holdCheck, tapCheck, shareCheck,
+                                        conflictLabel, tableScroll, buttons, hideCheck, cycleCheck, separator(), footer])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
         stack.setCustomSpacing(4, after: sidePicker)
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)
-        for view in [permissionRow, hammerspoonRow, tableScroll, buttons, footer, sideNote] {
+        for view in [permissionRow, hammerspoonRow, tableScroll, buttons, footer, sideNote, conflictLabel] {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
         for view in stack.arrangedSubviews where view is NSBox {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
         NSLayoutConstraint.activate([
+            content.widthAnchor.constraint(equalToConstant: 620),
             stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 18),
             stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
             stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
@@ -155,6 +159,14 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         button.action = action
     }
 
+    /// Flexible horizontally only; a bare NSView would also soak up spare height.
+    private func spacer() -> NSView {
+        let view = NSView()
+        view.setContentHuggingPriority(.init(1), for: .horizontal)
+        view.heightAnchor.constraint(equalToConstant: 1).isActive = true
+        return view
+    }
+
     private func separator() -> NSBox {
         let box = NSBox()
         box.boxType = .separator
@@ -166,14 +178,21 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private func reload() {
         let s = config.side(side)
         sidePicker.selectedSegment = side == .right ? 0 : 1
-        enabledCheck.title = side == .right ? T("启用右 ⌘ + 字母", "Enable right ⌘ + letter")
-                                            : T("启用双击左 ⌘", "Enable double-tap of left ⌘")
+        let key = side == .right ? T("右 ⌘", "right ⌘") : T("左 ⌘", "left ⌘")
+        holdCheck.title = T("按住\(key)再按字母：直接切到 app", "Hold \(key) and press a letter: jump to the app")
+        tapCheck.title = T("快速按两下\(key)：弹出字母面板，再按字母", "Tap \(key) twice: show the letter panel, then press a letter")
         sideNote.stringValue = side == .right
-            ? T("按住右边的 ⌘ 再按字母，直接切到对应 app。左 ⌘ 的 ⌘C、⌘V 等快捷键不受影响；右 ⌘ 同时按 ⇧⌥⌃ 时照常放行。",
-                "Hold the right ⌘ and press a letter to jump to its app. Left ⌘ shortcuts (⌘C, ⌘V…) are untouched; right ⌘ with ⇧⌥⌃ passes through.")
-            : T("快速按两下左 ⌘，屏幕中间出现字母面板，再按字母切换；Esc 或 4 秒内不按键会自动关闭。面板不会抢走当前窗口的焦点。",
-                "Tap left ⌘ twice quickly to show the letter panel, then press a letter; Esc or 4 seconds without a key closes it. The panel never takes focus.")
-        enabledCheck.state = s.enabled ? .on : .off
+            ? T("两种方式可以同时打开，左右 ⌘ 也可以同时使用。右 ⌘ 同时按 ⇧⌥⌃ 时照常放行。",
+                "Both ways can be on together, and on both ⌘ keys. Right ⌘ with ⇧⌥⌃ passes through.")
+            : T("按住左 ⌘ 时只接管下表里指定了 app 的字母，其余 ⌘C、⌘V 等照常；面板 Esc 或 4 秒不按键自动关闭，不抢焦点。",
+                "Holding left ⌘ only takes the letters pinned below; ⌘C, ⌘V and the rest keep working. The panel closes on Esc or after 4 seconds and never takes focus.")
+        holdCheck.state = s.enabled && s.hold ? .on : .off
+        tapCheck.state = s.enabled && s.doubleTap ? .on : .off
+        let conflicts = side == .left ? config.leftHoldConflicts() : []
+        conflictLabel.isHidden = conflicts.isEmpty
+        conflictLabel.stringValue = T("⚠︎ 按住左 ⌘ 会占用这些常用快捷键：", "⚠︎ Holding left ⌘ takes over these shortcuts: ")
+            + conflicts.map { "⌘\($0.letter.uppercased()) \($0.shortcut)" }.joined(separator: T("、", ", "))
+            + T("。可关掉“使用与右 ⌘ 相同的字母”给左边单独设字母。", ". Turn off shared letters to give left ⌘ its own.")
         shareCheck.isHidden = side == .right
         shareCheck.state = s.useRightBindings ? .on : .off
         hideCheck.state = s.hideIfFrontmost ? .on : .off
@@ -190,12 +209,25 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         refreshStatus()
     }
 
+    /// Rows come and go (warnings, Hammerspoon), so the window follows its content.
+    private func fitWindow() {
+        guard let window, let content = window.contentView else { return }
+        content.layoutSubtreeIfNeeded()
+        let height = content.fittingSize.height
+        guard abs(height - content.frame.height) > 0.5 else { return }
+        var frame = window.frame
+        let newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: NSSize(width: 620, height: height)))
+        frame.origin.y += frame.height - newFrame.height
+        frame.size = newFrame.size
+        window.setFrame(frame, display: true)
+    }
+
     func refreshStatus() {
         let trusted = EventTap.trusted
         permissionLabel.stringValue = trusted
             ? (isTapRunning() ? T("✓ 已授权辅助功能，正在工作", "✓ Accessibility granted — active")
                               : T("✓ 已授权辅助功能", "✓ Accessibility granted"))
-            : T("⚠︎ 需要授权“辅助功能”才能接收右 ⌘ 与左 ⌘ 按键", "⚠︎ Allow Accessibility so Initials can receive ⌘ keys")
+            : T("⚠︎ 需要授权“辅助功能”才能接收 ⌘ 按键", "⚠︎ Allow Accessibility so Initials can receive ⌘ keys")
         permissionLabel.textColor = trusted ? .systemGreen : .systemOrange
         permissionButton.isHidden = trusted
         let hasMacKit = FileManager.default.fileExists(atPath: Hammerspoon.mackitConfigDirectory.path)
@@ -207,6 +239,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             : T("Hammerspoon 的 rcmd 已关闭，由 Initials 处理。", "Hammerspoon's rcmd is off; Initials handles the keys.")
         hammerspoonButton.title = rcmdOn ? T("关闭 Hammerspoon rcmd", "Turn off Hammerspoon rcmd")
                                          : T("恢复 Hammerspoon rcmd", "Restore Hammerspoon rcmd")
+        fitWindow()
     }
 
     private func commit(_ note: String? = nil) {
@@ -232,7 +265,17 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         reload()
     }
 
-    @objc private func toggleEnabled() { config.update(side) { $0.enabled = enabledCheck.state == .on }; commit() }
+    @objc private func toggleHold() { setTrigger { $0.hold = holdCheck.state == .on } }
+    @objc private func toggleTap() { setTrigger { $0.doubleTap = tapCheck.state == .on } }
+
+    /// The checkboxes show `enabled && trigger`, so switching one on also re-enables a side the CLI disabled.
+    private func setTrigger(_ change: (inout SideConfig) -> Void) {
+        config.update(side) { s in
+            if !s.enabled { s.hold = false; s.doubleTap = false; s.enabled = true }
+            change(&s)
+        }
+        commit()
+    }
     @objc private func toggleShare() { config.update(.left) { $0.useRightBindings = shareCheck.state == .on }; commit() }
     @objc private func toggleHide() { config.update(side) { $0.hideIfFrontmost = hideCheck.state == .on }; commit() }
     @objc private func toggleCycle() { config.update(side) { $0.cycleUnbound = cycleCheck.state == .on }; commit() }
@@ -371,7 +414,11 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     func snapshot(side: Side, to url: URL, appearance: NSAppearance?) throws {
         window?.appearance = appearance
         selectSide(side)
-        guard let view = window?.contentView else { return }
+        // Docs show the product, not this Mac's Hammerspoon state.
+        hammerspoonLabel.superview?.isHidden = true
+        fitWindow()
+        // The frame view includes the title bar and window buttons.
+        guard let view = window?.contentView?.superview ?? window?.contentView else { return }
         view.layoutSubtreeIfNeeded()
         view.displayIfNeeded()
         try writeRetinaPNG(of: view, to: url)

@@ -10,6 +10,13 @@ let R = KeyEngine.rightCommandDevice | KeyEngine.command
 let L = KeyEngine.leftCommandDevice | KeyEngine.command
 let codeC: UInt16 = 8, codeD: UInt16 = 2, codeM: UInt16 = 46, code1: UInt16 = 18
 
+func tap(_ e: inout KeyEngine, at t: Double, hold: Double = 0.05) -> [KeyOutput] {
+    [e.handle(.flagsChanged(flags: L, time: t)), e.handle(.flagsChanged(flags: 0, time: t + hold))]
+}
+func rtap(_ e: inout KeyEngine, at t: Double) -> [KeyOutput] {
+    [e.handle(.flagsChanged(flags: R, time: t)), e.handle(.flagsChanged(flags: 0, time: t + 0.05))]
+}
+
 // MARK: Right ⌘ + letter
 
 do {
@@ -23,20 +30,61 @@ do {
     check(e.handle(.keyDown(code: codeC, flags: R | KeyEngine.option, isRepeat: false, time: 1)) == .pass, "right ⌥⌘C passes")
     check(e.handle(.keyDown(code: code1, flags: R, isRepeat: false, time: 1)) == .pass, "right ⌘1 passes (not a letter)")
     check(e.handle(.keyDown(code: codeM, flags: 0, isRepeat: false, time: 1)) == .pass, "plain typing passes")
-    e.rightEnabled = false
-    check(e.handle(.keyDown(code: codeD, flags: R, isRepeat: false, time: 2)) == .pass, "disabled right side passes")
+    e.right.hold = false
+    check(e.handle(.keyDown(code: codeD, flags: R, isRepeat: false, time: 2)) == .pass, "right hold off passes")
+    e.right = Trigger(hold: true, anyLetter: false, pinned: Trigger.mask(["d"]))
+    check(e.handle(.keyDown(code: codeD, flags: R, isRepeat: false, time: 3)) == .act(.right, "d"), "cycling off: pinned letter still acts")
+    check(e.handle(.keyDown(code: codeM, flags: R, isRepeat: false, time: 3)) == .pass, "cycling off: unpinned letter passes")
+}
+
+// MARK: Left ⌘ held + letter
+
+do {
+    var e = KeyEngine()
+    e.left = Trigger(hold: true, doubleTap: true, anyLetter: false, pinned: Trigger.mask(["d", "m"]))
+    check(e.handle(.keyDown(code: codeD, flags: L, isRepeat: false, time: 0)) == .act(.left, "d"), "left ⌘ + pinned D acts")
+    check(e.handle(.keyUp(code: codeD, flags: L)) == .swallow, "its key-up is swallowed")
+    check(e.handle(.keyDown(code: codeC, flags: L, isRepeat: false, time: 1)) == .pass, "left ⌘C still copies (C not pinned)")
+    check(e.handle(.keyDown(code: codeM, flags: L | KeyEngine.shift, isRepeat: false, time: 1)) == .pass, "left ⇧⌘M passes")
+    check(e.handle(.keyDown(code: codeD, flags: R, isRepeat: false, time: 2)) == .act(.right, "d"), "right ⌘ still works alongside")
+    check(e.handle(.keyDown(code: codeM, flags: L | R, isRepeat: false, time: 3)) == .act(.right, "m"), "both ⌘ held: right wins")
+    e.left.anyLetter = true
+    e.left.hold = false
+    check(e.handle(.keyDown(code: codeD, flags: L, isRepeat: false, time: 4)) == .pass, "left hold off passes")
+    e.left.hold = true
+    _ = e.handle(.flagsChanged(flags: L, time: 5))
+    _ = e.handle(.keyDown(code: codeD, flags: L, isRepeat: false, time: 5.05))
+    _ = e.handle(.keyUp(code: codeD, flags: L))
+    _ = e.handle(.flagsChanged(flags: 0, time: 5.1))
+    check(tap(&e, at: 5.2) == [.pass, .pass], "hold + letter then a tap is not a double-tap")
+}
+
+// MARK: Right ⌘ double-tap, both sides together
+
+do {
+    var e = KeyEngine()
+    e.right.doubleTap = true
+    check(rtap(&e, at: 0) == [.pass, .pass], "first right tap does nothing")
+    check(rtap(&e, at: 0.2) == [.pass, .openPicker(.right)], "second right tap opens the right picker (left double-tap also on)")
+    check(e.handle(.keyDown(code: codeM, flags: 0, isRepeat: false, time: 0.5)) == .act(.right, "m"), "picker letter acts on right side")
+    check(tap(&e, at: 1) == [.pass, .pass] && tap(&e, at: 1.2) == [.pass, .openPicker(.left)], "left double-tap still opens the left picker")
+    _ = e.handle(.keyDown(code: KeyEngine.escape, flags: 0, isRepeat: false, time: 1.4))
+    _ = rtap(&e, at: 2)
+    check(tap(&e, at: 2.2) == [.pass, .pass], "right tap then left tap is not a double-tap")
+    check(e.handle(.keyDown(code: codeD, flags: R, isRepeat: false, time: 3)) == .act(.right, "d"), "right hold and double-tap coexist")
+    var f = KeyEngine()
+    f.right = Trigger(hold: true, anyLetter: true)
+    _ = rtap(&f, at: 0)
+    check(rtap(&f, at: 0.2) == [.pass, .pass], "right double-tap off never opens")
 }
 
 // MARK: Left ⌘ double-tap
 
-func tap(_ e: inout KeyEngine, at t: Double, hold: Double = 0.05) -> [KeyOutput] {
-    [e.handle(.flagsChanged(flags: L, time: t)), e.handle(.flagsChanged(flags: 0, time: t + hold))]
-}
 
 do {
     var e = KeyEngine()
     check(tap(&e, at: 0) == [.pass, .pass], "first tap does nothing")
-    check(tap(&e, at: 0.2) == [.pass, .openPicker], "second quick tap opens the picker")
+    check(tap(&e, at: 0.2) == [.pass, .openPicker(.left)], "second quick tap opens the picker")
     check(e.pickerOpen, "engine knows the picker is open")
     check(e.handle(.keyDown(code: codeM, flags: 0, isRepeat: false, time: 0.5)) == .act(.left, "m"), "letter in picker acts on left side")
     check(!e.pickerOpen, "picker closes after a letter")
@@ -53,7 +101,7 @@ do {
     var e = KeyEngine()
     _ = tap(&e, at: 0)
     check(tap(&e, at: 0.8) == [.pass, .pass], "slow second tap is just a new first tap")
-    check(tap(&e, at: 1.0) == [.pass, .openPicker], "…which a quick third tap completes")
+    check(tap(&e, at: 1.0) == [.pass, .openPicker(.left)], "…which a quick third tap completes")
 }
 do {
     var e = KeyEngine()
@@ -76,7 +124,7 @@ do {
     check(!h.pickerOpen, "picker stays closed after a chord")
     check(tap(&h, at: 0.25) == [.pass, .pass], "⌘⇧ chord cancels the double-tap")
     var k = KeyEngine()
-    k.leftEnabled = false
+    k.left.doubleTap = false
     _ = tap(&k, at: 0)
     check(tap(&k, at: 0.2) == [.pass, .pass], "disabled left side never opens")
 }
@@ -108,6 +156,17 @@ do {
     let old = try! JSONDecoder().decode(Config.self, from: #"{"right":{"bindings":{"d":{"name":"DingTalk"}}}}"#.data(using: .utf8)!)
     check(old.right.enabled && old.right.cycleUnbound && old.left.useRightBindings, "missing fields take defaults")
     check(old.bindings(for: .left)["d"]?.name == "DingTalk", "left borrows right letters by default")
+    check(old.right.hold && !old.right.doubleTap && !old.left.hold && old.left.doubleTap, "1.0 files keep right-hold / left-double-tap")
+    check(Config() == (try! JSONDecoder().decode(Config.self, from: "{}".data(using: .utf8)!)), "empty file equals fresh defaults")
+    let lt = old.trigger(for: .left), rt = old.trigger(for: .right)
+    check(rt.hold && rt.anyLetter && !lt.hold && lt.doubleTap && !lt.anyLetter, "triggers follow the config")
+    check(lt.pinned == Trigger.mask(["d"]), "left trigger knows the shared pinned letters")
+    var both = old
+    both.left.hold = true
+    both.right.bindings["c"] = Binding(name: "Calendar")
+    check(both.leftHoldConflicts().map(\.letter) == ["c"], "pinning C with left hold warns about ⌘C")
+    both.left.enabled = false
+    check(both.trigger(for: .left) == Trigger(pinned: Trigger.mask(["c", "d"])) && both.leftHoldConflicts().isEmpty, "disabled side triggers nothing")
     check(Config.normalizedLetter("D") == "d" && Config.normalizedLetter("dd") == nil && Config.normalizedLetter("1") == nil, "letter validation")
     let dir = FileManager.default.temporaryDirectory.appendingPathComponent("initials-test-\(getpid())")
     let url = dir.appendingPathComponent("config.json")

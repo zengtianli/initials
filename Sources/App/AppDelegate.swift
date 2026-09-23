@@ -56,8 +56,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func applyConfig() {
-        tap.engine.rightEnabled = config.right.enabled && !paused
-        tap.engine.leftEnabled = config.left.enabled && !paused
+        tap.engine.right = paused ? Trigger() : config.trigger(for: .right)
+        tap.engine.left = paused ? Trigger() : config.trigger(for: .left)
         tap.engine.doubleTap = config.doubleTapSeconds
         settings?.replaceConfig(config)
         updateStatusIcon()
@@ -110,8 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case let .act(side, letter):
             closePicker()
             Launcher.perform(letter: letter, side: side, config: config)
-        case .openPicker:
-            showPicker()
+        case let .openPicker(side):
+            showPicker(side)
         case .closePicker:
             closePicker()
         case .pass, .swallow:
@@ -119,9 +119,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func showPicker() {
+    private func showPicker(_ side: Side) {
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
-        picker.show(PickerPanel.entries(config: config, side: .left, running: Launcher.runningApps()), on: screen)
+        picker.show(PickerPanel.entries(config: config, side: side, running: Launcher.runningApps()), on: screen)
         pickerTimer?.invalidate()
         pickerTimer = Timer.scheduledTimer(withTimeInterval: config.pickerTimeoutSeconds, repeats: false) { [weak self] _ in
             self?.closePicker()
@@ -215,8 +215,8 @@ enum MainMenu {
         edit.addItem(withTitle: T("粘贴", "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         edit.addItem(withTitle: T("全选", "Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         let view = NSMenu(title: T("显示", "View"))
-        let right = view.addItem(withTitle: T("右 ⌘ + 字母", "Right ⌘ + letter"), action: #selector(SideSwitch.right), keyEquivalent: "1")
-        let left = view.addItem(withTitle: T("双击左 ⌘", "Double-tap left ⌘"), action: #selector(SideSwitch.left), keyEquivalent: "2")
+        let right = view.addItem(withTitle: T("右 ⌘", "Right ⌘"), action: #selector(SideSwitch.right), keyEquivalent: "1")
+        let left = view.addItem(withTitle: T("左 ⌘", "Left ⌘"), action: #selector(SideSwitch.left), keyEquivalent: "2")
         SideSwitch.shared.settings = settings
         right.target = SideSwitch.shared
         left.target = SideSwitch.shared

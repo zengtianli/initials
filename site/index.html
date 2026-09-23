@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Initials · 一个键切到任何 app</title>
-<meta name="description" content="Initials：按住右 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；双击左 ⌘ 弹出字母面板。原生 macOS，约 15 MB 内存，开源免费。">
+<meta name="description" content="Initials：按住 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；左右 ⌘ 都能设，双击 ⌘ 弹出字母面板。原生 macOS，约 15 MB 内存，开源免费。">
 <link rel="icon" href="assets/icon.png">
 <style>
 :root{color-scheme:light;--ink:#22303a;--muted:#5d6b75;--accent:#1d7a78;--accent-dark:#155f5d;--coral:#d9654f;--line:#dde6e8;--paper:#f7faf9;--card:#fff;--soft:#e8f2f1;--radius:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
@@ -54,6 +54,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;bac
 .shots figure{margin:0}
 .shots figcaption{font-size:13px;color:var(--muted);margin-top:10px}
 .shots img{border-radius:12px;border:1px solid var(--line);background:#fff}
+img.scene{display:block;width:100%;height:auto;border:0;border-radius:var(--radius);margin:0 0 28px}
+.shots img.scene{border:0;margin:0}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;font-size:14px}
 th,td{padding:12px 16px;text-align:left;border-top:1px solid #edf2f2;vertical-align:top}
 thead th{background:#f2f7f6;border-top:0;font-size:13px;color:var(--muted)}
@@ -92,16 +94,16 @@ footer strong{color:var(--ink)}
   <div>
     <p class="eyebrow">MAC 切换 APP · 原生 · 开源</p>
     <h1>按住右 ⌘，<br>按字母，<em>就到了。</em></h1>
-    <p class="lead">给常用 app 各指定一个字母。<kbd>右⌘</kbd>+<kbd>M</kbd> 切到音乐，再按一次就隐藏。不用找 Dock，也不用在 ⌘Tab 里一个个翻。左边的 ⌘ 快速按两下，还会弹出字母面板，看一眼就知道按哪个。</p>
+    <p class="lead">给常用 app 各指定一个字母。<kbd>右⌘</kbd>+<kbd>M</kbd> 切到音乐，再按一次就隐藏。不用找 Dock，也不用在 ⌘Tab 里一个个翻。左边的 ⌘ 也能按住直达，或者快速按两下弹出字母面板，看一眼就知道按哪个。</p>
     <div class="hero-actions">
       <a class="button" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>免费下载 Mac 版 <span aria-hidden="true">↓</span></a>
       <a class="button ghost" href="#how">先看怎么用</a>
     </div>
     <p class="fine">v{{VERSION}} · {{SIZE}} MB · macOS 14 或更新 · Apple Silicon<br>Developer ID 签名，已通过 Apple 公证</p>
-    <div class="chips"><span>左 ⌘ 的 ⌘C、⌘V 不受影响</span><span>约 15 MB 内存</span><span>附带命令行</span></div>
+    <div class="chips"><span>左右 ⌘ 都能用</span><span>⌘C、⌘V 照常</span><span>约 15 MB 内存</span><span>附带命令行</span></div>
   </div>
   <div class="stage">
-    <img src="assets/picker-zh.png" alt="双击左 ⌘ 后出现的字母面板：C Calendar、F Finder、M Music、S Safari 等" width="410" height="223" fetchpriority="high">
+    <img src="assets/picker-zh.png" alt="双击左 ⌘ 后出现的字母面板：C Calendar、F Finder、M Music、S Safari 等" width="410" height="189" fetchpriority="high">
     <div class="keys-demo"><kbd>左⌘</kbd><kbd>左⌘</kbd> 弹出面板 → 按 <kbd>M</kbd> 切到音乐</div>
   </div>
 </section>
@@ -109,33 +111,35 @@ footer strong{color:var(--ink)}
 <section class="strip wrap" aria-label="实测数据">
   <article><b>≈ 15 MB</b><h2>内存占用</h2><p>活动监视器口径（物理内存），菜单栏常驻。</p></article>
   <article><b>≈ 0%</b><h2>空闲 CPU</h2><p>不轮询按键，只在你按键时由系统回调；实测空闲 1 分钟用 0.04 秒 CPU。</p></article>
-  <article><b>4 ns</b><h2>每次按键的判断</h2><p>拦截回调里只做几次比较，切换动作放到之后执行。</p></article>
+  <article><b>≈ 6 ns</b><h2>每次按键的判断</h2><p>拦截回调里只做几次比较，切换动作放到之后执行。</p></article>
   <article><b>{{SIZE}} MB</b><h2>安装包</h2><p>纯 Swift + AppKit，没有内置浏览器或运行时。</p></article>
 </section>
 
 <section id="how" class="section wrap">
   <div class="section-title">
-    <p class="eyebrow">两种用法</p>
-    <h2>右 ⌘ 直达，左 ⌘ 看着选。</h2>
-    <p>两边各有一张字母表，可以一样，也可以分开设。键盘右边的 ⌘ 平时几乎用不到，拿来切 app 正合适。</p>
+    <p class="eyebrow">两种用法 · 左右都能用</p>
+    <h2>按住直达，双击看着选。</h2>
+    <p>左右两个 ⌘ 各自决定怎么用：按住 + 字母、双击弹面板，或者两样都开。默认是右 ⌘ 按住、左 ⌘ 双击；想用左手，把左 ⌘ 的“按住”也打开就行。</p>
   </div>
+  <img class="scene" src="assets/scene-keys-zh.png" alt="键盘上左右两个 ⌘ 都可设置：按住右 ⌘ + M 切到音乐，按住左 ⌘ + K 切到 Keynote，双击任一 ⌘ 弹出字母面板" width="1100" height="560" loading="lazy">
   <div class="modes">
     <article class="mode">
-      <h3>右 ⌘ + 字母</h3>
-      <p class="how"><kbd>右⌘</kbd> 按住 + <kbd>字母</kbd></p>
+      <h3>按住 ⌘ + 字母</h3>
+      <p class="how"><kbd>右⌘</kbd> 或 <kbd>左⌘</kbd> 按住 + <kbd>字母</kbd></p>
       <ul>
         <li><strong>指定了 app 的字母</strong>：没开就启动，开着就切过去，已经在最前就隐藏；再按一次切回来。</li>
-        <li><strong>没指定的字母</strong>：在名字以这个字母开头、正在运行的 app 之间轮换，比如按 <kbd>W</kbd> 在微信和天气之间切。</li>
-        <li>只拦截“右 ⌘ + 单个字母”。同时按着 ⇧、⌥、⌃ 的组合照常交给当前 app，左 ⌘ 的所有快捷键完全不碰。</li>
+        <li><strong>右 ⌘ 没指定的字母</strong>：在名字以这个字母开头、正在运行的 app 之间轮换，比如按 <kbd>W</kbd> 在微信和天气之间切。</li>
+        <li><strong>左 ⌘ 只接管指定过的字母</strong>：⌘C、⌘V、⌘W 这些照常工作。设置里如果左 ⌘ 占了常用快捷键，会直接提示是哪几个。</li>
+        <li>同时按着 ⇧、⌥、⌃ 的组合一律照常交给当前 app。两个 ⌘ 同时按住时以右 ⌘ 为准。</li>
       </ul>
     </article>
     <article class="mode">
-      <h3>双击左 ⌘，再按字母</h3>
-      <p class="how"><kbd>左⌘</kbd> <kbd>左⌘</kbd> → <kbd>字母</kbd></p>
+      <h3>双击 ⌘，再按字母</h3>
+      <p class="how"><kbd>⌘</kbd> <kbd>⌘</kbd> → <kbd>字母</kbd></p>
       <ul>
-        <li>快速按两下左 ⌘，屏幕中间弹出字母面板，列出每个字母对应的 app，按字母就切换。</li>
+        <li>快速按两下 ⌘（左右都可以开），屏幕中间弹出这一边的字母面板，按字母就切换。</li>
         <li>面板不会抢当前窗口的焦点，按 Esc 或 4 秒不按键会自动关闭。</li>
-        <li>按 ⌘C 之类的组合、按住不放、或者两下之间点了鼠标，都不会算作双击。</li>
+        <li>按 ⌘C 之类的组合、按住不放、两下之间点了鼠标，或者左右 ⌘ 各按一下，都不会算作双击。</li>
       </ul>
     </article>
   </div>
@@ -146,13 +150,17 @@ footer strong{color:var(--ink)}
     <div class="section-title">
       <p class="eyebrow">设置</p>
       <h2>一张字母表，几个开关。</h2>
-      <p>点菜单栏的 ⌘ 图标 → 设置。键盘操作：<kbd>⌘1</kbd>/<kbd>⌘2</kbd> 切换左右两边，<kbd>⌘N</kbd> 添加，<kbd>⌫</kbd> 移除，<kbd>↩</kbd> 换 app，<kbd>⌘W</kbd> 关闭。</p>
+      <p>点菜单栏的 ⌘ 图标 → 设置。键盘操作：<kbd>⌘1</kbd>/<kbd>⌘2</kbd> 切换右 ⌘ / 左 ⌘，<kbd>⌘N</kbd> 添加，<kbd>⌫</kbd> 移除，<kbd>↩</kbd> 换 app，<kbd>⌘W</kbd> 关闭。</p>
     </div>
     <div class="shots">
-      <figure><img src="assets/settings-right-zh.png" alt="Initials 设置：右 ⌘ 的字母表，C Calendar、F Finder、H Photos 等" width="620" height="600" loading="lazy"><figcaption>右 ⌘ 的字母表。“添加…”选 app 并挑字母；“从 Hammerspoon 导入”可以一次导入你已有的 rcmd 映射。</figcaption></figure>
       <div>
-        <figure><img src="assets/picker-dark-zh.png" alt="深色模式下的字母面板" width="410" height="223" loading="lazy"><figcaption>字母面板跟随系统深浅色。</figcaption></figure>
+        <figure><img class="scene" src="assets/scene-settings-right-zh.png" alt="Initials 设置：右 ⌘ 的两个开关和字母表，C Calendar、F Finder、M Music 等" width="760" height="661" loading="lazy"><figcaption>右 ⌘：勾选“按住”和/或“双击”。“添加…”选 app 并挑字母；“从 Hammerspoon 导入”可以一次导入已有的 rcmd 映射。</figcaption></figure>
+        <figure style="margin-top:22px"><img class="scene" src="assets/scene-settings-left-zh.png" alt="Initials 设置：左 ⌘ 按住和双击都打开，单独一张字母表 J Photos、K Keynote、Y Weather" width="760" height="695" loading="lazy"><figcaption>左 ⌘：按住和双击都打开，用单独的字母表，避开 ⌘C、⌘V 这些常用键。</figcaption></figure>
+      </div>
+      <div>
+        <figure><img class="scene" src="assets/scene-picker-dark-zh.png" alt="深色模式下浮在窗口上的字母面板" width="1100" height="720" loading="lazy"><figcaption>字母面板跟随系统深浅色。</figcaption></figure>
         <ul class="note" style="font-size:14px;line-height:1.9;padding-left:18px;margin-top:22px">
+          <li><strong>左右 ⌘ 各两个开关</strong>：“按住 + 字母”和“双击弹面板”，可以只开一个，也可以都开。</li>
           <li><strong>按下的 app 已在最前时隐藏它</strong>：再按一次切回来，和 rcmd 的习惯相同。</li>
           <li><strong>未指定的字母轮换运行中的 app</strong>：关掉的话，只有指定过的字母才会响应。</li>
           <li><strong>左 ⌘ 使用与右 ⌘ 相同的字母</strong>：默认打开，只维护一张表；关掉可以给左边单独设。</li>
@@ -173,7 +181,7 @@ footer strong{color:var(--ink)}
   <table>
     <thead><tr><th></th><th>Initials</th><th><a href="https://lowtechguys.com/rcmd/">rcmd</a></th><th><a href="https://github.com/huytd/OctoCmd">OctoCmd</a></th><th><a href="https://github.com/jcampuza/rcmd-lite">rcmd-lite</a></th><th><a href="https://github.com/gbammc/Thor">Thor</a></th></tr></thead>
     <tbody>
-      <tr><td>怎么切</td><td class="me">右 ⌘ + 字母直达；双击左 ⌘ 弹面板</td><td>右 ⌘ + 字母</td><td>按右 ⌘ 弹面板，再按字母</td><td>右 ⌥ + 字母</td><td>每个 app 单独录一个组合键</td></tr>
+      <tr><td>怎么切</td><td class="me">左右 ⌘ 都可：按住 + 字母直达、双击弹面板，可同时开</td><td>右 ⌘ + 字母</td><td>按右 ⌘ 弹面板，再按字母</td><td>右 ⌥ + 字母</td><td>每个 app 单独录一个组合键</td></tr>
       <tr><td>没指定的字母</td><td class="me">在同首字母的运行中 app 间轮换</td><td>按首字母</td><td>按首字母</td><td>临时分配给运行中的 app</td><td>—</td></tr>
       <tr><td>另外的功能</td><td class="me">命令行；从 Hammerspoon 导入</td><td>见其官网</td><td>屏幕文字搜索、Vimium 式点击、滚动模式</td><td>提示面板</td><td>—</td></tr>
       <tr><td>源码</td><td class="me">开源 · MIT</td><td>闭源</td><td>开源 · Apache-2.0</td><td>开源</td><td>开源</td></tr>
@@ -192,7 +200,7 @@ footer strong{color:var(--ink)}
     </div>
     <ol class="steps">
       <li><span class="n">1</span><div><h3>下载并拖进“应用程序”</h3><p>打开下载的 DMG，把 Initials 拖到 Applications，然后从“应用程序”打开它。安装包已经过 Apple 公证，可以直接打开。</p></div></li>
-      <li><span class="n">2</span><div><h3>允许“辅助功能”</h3><p>第一次打开会显示设置窗口。点 <strong>打开辅助功能设置…</strong>，在“系统设置 › 隐私与安全性 › 辅助功能”里打开 Initials 的开关。回到设置窗口，顶部变成 <strong>✓ 已授权辅助功能，正在工作</strong> 就好了，不用重启。</p><p>为什么需要它：Initials 要接到右 ⌘ + 字母，并且不让这个按键再传给当前 app。它只看 ⌘ 和紧跟的字母，不记录、不保存你打的字。</p></div></li>
+      <li><span class="n">2</span><div><h3>允许“辅助功能”</h3><p>第一次打开会显示设置窗口。点 <strong>打开辅助功能设置…</strong>，在“系统设置 › 隐私与安全性 › 辅助功能”里打开 Initials 的开关。回到设置窗口，顶部变成 <strong>✓ 已授权辅助功能，正在工作</strong> 就好了，不用重启。</p><p>为什么需要它：Initials 要接到 ⌘ + 字母，并且不让这个按键再传给当前 app。它只看 ⌘ 和紧跟的字母，不记录、不保存你打的字。</p></div></li>
       <li><span class="n">3</span><div><h3>给字母指定 app</h3><p>点 <strong>添加…</strong> 选 app 并挑字母。已经在用 Hammerspoon rcmd 的，点 <strong>从 Hammerspoon 导入</strong>，确认好用之后再点 <strong>关闭 Hammerspoon rcmd</strong>，免得两边同时处理同一个键。</p></div></li>
     </ol>
   </div>
@@ -210,7 +218,9 @@ initials set w WeChat --side left  # 只给左 ⌘ 设（先 initials share off�
 initials unset m
 initials import                    # 导入 ~/.hammerspoon/keymaps.lua 的 right_command
 initials status                    # 是否在运行、是否已授权、是否在拦截
-initials disable left              # 关掉双击左 ⌘</code></pre>
+initials hold on --side left       # 左 ⌘ 也按住 + 字母直达（只接管指定过的字母）
+initials tap on --side right       # 右 ⌘ 也能双击弹面板
+initials tap off --side left       # 关掉双击左 ⌘</code></pre>
   <p class="note">退出码：0 成功，1 没找到，2 用法错误，3 Initials 没在运行（status）。配置文件：<code>~/Library/Application Support/cyou.tianli.initials/config.json</code>。</p>
 </section>
 
@@ -219,10 +229,11 @@ initials disable left              # 关掉双击左 ⌘</code></pre>
     <div class="section-title"><p class="eyebrow">遇到问题</p><h2>对照情况，按下一步做。</h2></div>
     <details><summary>按右 ⌘ + 字母没反应</summary><p>先看菜单栏的 ⌘ 图标：变灰说明还没授权或已暂停。打开设置，顶部如果提示需要授权，点“打开辅助功能设置…”打开开关。也可以在终端运行 <code>initials status</code>，看 intercepting 是不是 yes。</p></details>
     <details><summary>装了新版本以后又不灵了</summary><p>macOS 有时会让旧的授权失效。到“辅助功能”列表里把 Initials 关掉再打开；还不行就用“−”删掉，再重新添加。</p></details>
-    <details><summary>双击左 ⌘ 太容易误触，或者总是触发不了</summary><p>两下之间和每一下的时长默认都是 0.3 秒以内。不需要这个功能，可以在设置里关掉“启用双击左 ⌘”，或者运行 <code>initials disable left</code>。</p></details>
+    <details><summary>双击左 ⌘ 太容易误触，或者总是触发不了</summary><p>两下之间和每一下的时长默认都是 0.3 秒以内。不需要这个功能，可以在设置的“左 ⌘”页取消“快速按两下左 ⌘”，或者运行 <code>initials tap off --side left</code>。</p></details>
     <details><summary>和 Hammerspoon / rcmd 同时装会冲突吗</summary><p>字母一样时，两边做的事一样，谁先收到都行。确认 Initials 好用后，在设置里点“关闭 Hammerspoon rcmd”，只留一个处理。以后想恢复，点同一个按钮。</p></details>
     <details><summary>用中文输入法时字母对不上</summary><p>Initials 按键盘上印的英文字母判断，和当前用什么输入法无关。</p></details>
     <details><summary>想让某个右 ⌘ + 字母留给当前 app 用</summary><p>右 ⌘ 同时按 ⇧、⌥ 或 ⌃ 时不会被拦截。要完全停用右 ⌘ 这一边，运行 <code>initials disable right</code>。</p></details>
+    <details><summary>打开左 ⌘ 按住后，⌘C、⌘V 会不会失灵</summary><p>左 ⌘ 按住只接管字母表里指定了 app 的字母，其余快捷键照常。默认左 ⌘ 和右 ⌘ 共用一张表，如果表里有 C、V、W 之类的字母，设置窗和 <code>initials list</code> 都会标出被占用的快捷键；这时关掉“使用与右 ⌘ 相同的字母”，给左边单独设几个不常用的字母即可。</p></details>
   </div>
 </section>
 
