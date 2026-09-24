@@ -1,0 +1,245 @@
+{
+  "schema": 1,
+  "product": "Initials",
+  "version": "1.1.0",
+  "build": "2",
+  "executable_sha256": "94dca5c03164ffc821ca6b821d3dd2085e94a69b322b606dddd16ca639818d4a",
+  "created_at": "2026-09-24T07:04:21.789090+00:00",
+  "method": "真实界面离屏导览 · 示例配置 · 非连续实机录屏",
+  "audio": false,
+  "duration": 50,
+  "scope": "真实原生视图的离屏快照与局部放大；只含 Apple 应用的固定示例配置。",
+  "not_demonstrated": [
+    "真实按键",
+    "全局切换或隐藏应用",
+    "辅助功能授权流程"
+  ],
+  "safety": "仅调用 --snapshot 并在 startTap 前退出；没有模拟键盘、剪贴板或应用切换。",
+  "example_tables": {
+    "right": {
+      "right": {
+        "c": "Calendar",
+        "f": "Finder",
+        "m": "Music",
+        "n": "Notes",
+        "p": "Preview",
+        "s": "Safari",
+        "t": "Terminal"
+      },
+      "left": {
+        "j": "Calendar",
+        "k": "Music",
+        "y": "Preview"
+      }
+    },
+    "left": {
+      "right": {
+        "c": "Calendar",
+        "f": "Finder",
+        "m": "Music",
+        "n": "Notes",
+        "p": "Preview",
+        "s": "Safari",
+        "t": "Terminal"
+      },
+      "left": {
+        "j": "Calendar",
+        "k": "Music",
+        "y": "Preview"
+      }
+    },
+    "panel": {
+      "right": {
+        "c": "Calendar",
+        "f": "Finder",
+        "m": "Music",
+        "n": "Notes",
+        "p": "Preview",
+        "s": "Safari",
+        "t": "Terminal"
+      },
+      "left": {
+        "j": "Calendar",
+        "k": "Music",
+        "y": "Preview"
+      }
+    }
+  },
+  "chapters": [
+    {
+      "name": "right",
+      "title": "01 · 右 Command 的字母表",
+      "start": 0,
+      "duration": 18,
+      "frames": [
+        {
+          "source": "settings-right.png",
+          "crop": null,
+          "duration": 6,
+          "title": "先看「右 Command」设置",
+          "caption": "这是只含 Apple 应用的示例字母表。"
+        },
+        {
+          "source": "settings-right.png",
+          "crop": [
+            30,
+            375,
+            1210,
+            810
+          ],
+          "duration": 6,
+          "title": "一个字母，对应一个 app",
+          "caption": "示例中 M 对应 Music，F 对应 Finder；映射可自行修改。"
+        },
+        {
+          "source": "settings-right.png",
+          "crop": [
+            30,
+            165,
+            1210,
+            375
+          ],
+          "duration": 6,
+          "title": "按住与双击，分别开关",
+          "caption": "这里展示开关与映射；没有触发真实按键或切换应用。"
+        }
+      ]
+    },
+    {
+      "name": "panel",
+      "title": "02 · 看懂字母面板",
+      "start": 18,
+      "duration": 14,
+      "frames": [
+        {
+          "source": "picker.png",
+          "crop": null,
+          "duration": 7,
+          "title": "看字母，也看应用名称",
+          "caption": "这是原生面板的离屏快照，不是按键后弹出的实录。"
+        },
+        {
+          "source": "picker-dark.png",
+          "crop": null,
+          "duration": 7,
+          "title": "浅色和深色，同一张字母表",
+          "caption": "面板提示按字母选择、Esc 关闭；本段只说明界面。"
+        }
+      ]
+    },
+    {
+      "name": "left",
+      "title": "03 · 给左 Command 单独设一张表",
+      "start": 32,
+      "duration": 18,
+      "frames": [
+        {
+          "source": "settings-left.png",
+          "crop": null,
+          "duration": 6,
+          "title": "选择「左 Command」设置",
+          "caption": "示例关闭共用字母表，使用 J、K、Y 三个字母。"
+        },
+        {
+          "source": "settings-left.png",
+          "crop": [
+            30,
+            155,
+            1210,
+            445
+          ],
+          "duration": 6,
+          "title": "先看开关，再看共用选项",
+          "caption": "按住和双击可分别配置；共用选项决定是否沿用右侧映射。"
+        },
+        {
+          "source": "settings-left.png",
+          "crop": [
+            30,
+            445,
+            1210,
+            690
+          ],
+          "duration": 6,
+          "title": "只给需要的字母分配应用",
+          "caption": "本例未占用 C、V；实际使用仍需本人完成授权并验证按键。"
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "file": "picker-dark.png",
+      "sha256": "55c25e5cb5bbed5145ac0f9b52004ed3da27acf4f5934dbdfae6f13c4de9bda2"
+    },
+    {
+      "file": "picker.png",
+      "sha256": "252a3b0a3c76f647909f4bc313da1eb909d75ff7d4f48967fc837b575bffde17"
+    },
+    {
+      "file": "settings-left.png",
+      "sha256": "9e0685b2b499e48c0399e2aafa11b413ade8bf6d511ecd9064c1a425afca8e8e"
+    },
+    {
+      "file": "settings-right.png",
+      "sha256": "c7f8510219a81ba352255f28eeb1371dcee503da2f28eb96b0baf847b3fc6fa1"
+    }
+  ],
+  "files": [
+    {
+      "file": "left.jpg",
+      "sha256": "f040c0edae5d4991b6b58f96003de9955ea90a7e0143c90357563f7af83e0eb3",
+      "bytes": 129154
+    },
+    {
+      "file": "left.mp4",
+      "sha256": "a299984fe463ecc6eb679f6e2f1f77ddcea8ddaa8fad225158ec2da7b5fb3cca",
+      "bytes": 192442
+    },
+    {
+      "file": "left.vtt",
+      "sha256": "35a0b2240060c177fd702ade65d89b1172147fa4e69ab3409bbed32f7f6ef1b1",
+      "bytes": 617
+    },
+    {
+      "file": "panel.jpg",
+      "sha256": "1b1fa0d550bda825ac1e09d72cc7010a9894c85e9350c7b7f0f02a1c25e0b29f",
+      "bytes": 104411
+    },
+    {
+      "file": "panel.mp4",
+      "sha256": "43d7639c93562ee03beb457123452960418843b910e1134ae0d2c4eac06904f1",
+      "bytes": 126160
+    },
+    {
+      "file": "panel.vtt",
+      "sha256": "83ab46bb16407721fea333aa49548f998d1e5fe45d5ce615702f1030875fc9ef",
+      "bytes": 407
+    },
+    {
+      "file": "right.jpg",
+      "sha256": "7002cb9fe6bcf07bae26e7e0bbf27be523bb7d09e3a47a491f8d3030e4225132",
+      "bytes": 146003
+    },
+    {
+      "file": "right.mp4",
+      "sha256": "4d3aa0c4fcddf18a4033abf0ff379fdcd9128e2fecd33b77752d11e7c431ee84",
+      "bytes": 212556
+    },
+    {
+      "file": "right.vtt",
+      "sha256": "1273288996b67d52a98a3983bb71ac2cb1ff29b1702872bef732516e91df5bdf",
+      "bytes": 581
+    },
+    {
+      "file": "tutorial.mp4",
+      "sha256": "e7ac391232faf29e9721495a09bdf7478d19ca1643c28709a9238bd12e9f7e31",
+      "bytes": 529448
+    },
+    {
+      "file": "tutorial.vtt",
+      "sha256": "ef6ed439011475d7ef9cc05939fb476019d830845eaf694ed2a6513063424c11",
+      "bytes": 1591
+    }
+  ]
+}

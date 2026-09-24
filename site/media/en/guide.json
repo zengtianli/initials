@@ -1,0 +1,246 @@
+{
+  "schema": 1,
+  "product": "Initials",
+  "language": "en",
+  "version": "1.1.0",
+  "build": "2",
+  "executable_sha256": "94dca5c03164ffc821ca6b821d3dd2085e94a69b322b606dddd16ca639818d4a",
+  "created_at": "2026-09-24T09:26:53.494219+00:00",
+  "method": "Real UI · Offscreen guide · Example settings · Not a live recording",
+  "audio": false,
+  "duration": 50,
+  "scope": "Real native views rendered offscreen, with labelled detail crops and fixed Apple-app examples.",
+  "not_demonstrated": [
+    "Real key presses",
+    "Global app switching or hiding",
+    "Accessibility authorization"
+  ],
+  "safety": "Only --snapshot, which exits before startTap; no keyboard simulation, clipboard use or app switching.",
+  "example_tables": {
+    "right": {
+      "right": {
+        "c": "Calendar",
+        "f": "Finder",
+        "m": "Music",
+        "n": "Notes",
+        "p": "Preview",
+        "s": "Safari",
+        "t": "Terminal"
+      },
+      "left": {
+        "j": "Calendar",
+        "k": "Music",
+        "y": "Preview"
+      }
+    },
+    "left": {
+      "right": {
+        "c": "Calendar",
+        "f": "Finder",
+        "m": "Music",
+        "n": "Notes",
+        "p": "Preview",
+        "s": "Safari",
+        "t": "Terminal"
+      },
+      "left": {
+        "j": "Calendar",
+        "k": "Music",
+        "y": "Preview"
+      }
+    },
+    "panel": {
+      "right": {
+        "c": "Calendar",
+        "f": "Finder",
+        "m": "Music",
+        "n": "Notes",
+        "p": "Preview",
+        "s": "Safari",
+        "t": "Terminal"
+      },
+      "left": {
+        "j": "Calendar",
+        "k": "Music",
+        "y": "Preview"
+      }
+    }
+  },
+  "chapters": [
+    {
+      "name": "right",
+      "title": "01 · The right Command letter table",
+      "start": 0,
+      "duration": 18,
+      "frames": [
+        {
+          "source": "settings-right.png",
+          "crop": null,
+          "duration": 6,
+          "title": "Start with Right Command settings",
+          "caption": "This example only pins Apple apps."
+        },
+        {
+          "source": "settings-right.png",
+          "crop": [
+            30,
+            375,
+            1210,
+            810
+          ],
+          "duration": 6,
+          "title": "One letter, one app",
+          "caption": "M is Music and F is Finder. You can change these mappings."
+        },
+        {
+          "source": "settings-right.png",
+          "crop": [
+            30,
+            165,
+            1210,
+            375
+          ],
+          "duration": 6,
+          "title": "Hold and double-tap have separate switches",
+          "caption": "This guide shows settings; it does not press keys or switch apps."
+        }
+      ]
+    },
+    {
+      "name": "panel",
+      "title": "02 · Read the letter panel",
+      "start": 18,
+      "duration": 14,
+      "frames": [
+        {
+          "source": "picker.png",
+          "crop": null,
+          "duration": 7,
+          "title": "Find the letter beside the app name",
+          "caption": "An offscreen render of the native panel, not a live keyboard recording."
+        },
+        {
+          "source": "picker-dark.png",
+          "crop": null,
+          "duration": 7,
+          "title": "The same letter table in light and dark",
+          "caption": "The hints show letter selection and Esc. This clip explains the UI only."
+        }
+      ]
+    },
+    {
+      "name": "left",
+      "title": "03 · A separate table for left Command",
+      "start": 32,
+      "duration": 18,
+      "frames": [
+        {
+          "source": "settings-left.png",
+          "crop": null,
+          "duration": 6,
+          "title": "Open Left Command settings",
+          "caption": "This example turns sharing off and assigns J, K and Y."
+        },
+        {
+          "source": "settings-left.png",
+          "crop": [
+            30,
+            155,
+            1210,
+            445
+          ],
+          "duration": 6,
+          "title": "Check the triggers and the sharing option",
+          "caption": "Choose hold, double-tap, and whether to reuse the right-hand table."
+        },
+        {
+          "source": "settings-left.png",
+          "crop": [
+            30,
+            445,
+            1210,
+            690
+          ],
+          "duration": 6,
+          "title": "Pin only the letters you need",
+          "caption": "C and V are free here. Grant access and test your own shortcuts after installing."
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "file": "picker-dark.png",
+      "sha256": "6d38bc353f763d7d7c0ace4b1d05107876bf1a1d09729220e6cf7161482407fe"
+    },
+    {
+      "file": "picker.png",
+      "sha256": "8637bc66b03cb5e2fdaf5beaee88ad4143dc2a42b218aa1ac9f16074fd5ac466"
+    },
+    {
+      "file": "settings-left.png",
+      "sha256": "d14336698d635c4092620749ad91a55536e47522d71624785a76851d4454d7b8"
+    },
+    {
+      "file": "settings-right.png",
+      "sha256": "16a08066349e3d556fc14c12585266afcc0408ae0f6afc4bf799395a9c6ded0b"
+    }
+  ],
+  "files": [
+    {
+      "file": "left.jpg",
+      "sha256": "7c01fd1f6ec3480292d73feb3d74147468b20b870e5cb52b04ab81edbec56028",
+      "bytes": 141294
+    },
+    {
+      "file": "left.mp4",
+      "sha256": "e7d85e8b0d38251462e75a5a34164f15dc2328d0c1cbf76b1157b949596c7be5",
+      "bytes": 208347
+    },
+    {
+      "file": "left.vtt",
+      "sha256": "0ff3b40132f16f522f674e1859639f6952fa594584e1be61095abd082986690c",
+      "bytes": 617
+    },
+    {
+      "file": "panel.jpg",
+      "sha256": "bfe4a7f297d15cd3b4f8827472e819b184ad3786e4dad25c56951b686cf134e5",
+      "bytes": 111241
+    },
+    {
+      "file": "panel.mp4",
+      "sha256": "a7681604f8a04b881b7173d6505c02721ef19c222ba7d9e4ab8675eb3bbc0ea0",
+      "bytes": 131855
+    },
+    {
+      "file": "panel.vtt",
+      "sha256": "62563d8fa9bde49652f73610c74dcbadac1620cbfb671a471fb7d08b931d292f",
+      "bytes": 432
+    },
+    {
+      "file": "right.jpg",
+      "sha256": "5e5edfcf297d096567f231715c96ed352ca347d9a9837bbbc37a28814a180750",
+      "bytes": 158437
+    },
+    {
+      "file": "right.mp4",
+      "sha256": "26b8c9edf3ed4cb44243d086606abad5bc161b59339ea3eded0faca1cdb8b390",
+      "bytes": 227594
+    },
+    {
+      "file": "right.vtt",
+      "sha256": "a325d361652ad60bde198f7d58c63362983756c9419641f4dd40ad9b5f65d725",
+      "bytes": 570
+    },
+    {
+      "file": "tutorial.mp4",
+      "sha256": "14d4c34cc09926f3bc5c46f3e072c1bda680b0f0a389f154da8567d2325588a0",
+      "bytes": 566086
+    },
+    {
+      "file": "tutorial.vtt",
+      "sha256": "a2a7632b88555404d5d6c6d3ff5f639ffcf1dda275f15a0137f457288fc70cb4",
+      "bytes": 1605
+    }
+  ]
+}

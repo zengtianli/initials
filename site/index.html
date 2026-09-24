@@ -1,10 +1,20 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="{{LANG}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Initials · 一个键切到任何 app</title>
 <meta name="description" content="Initials：按住 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；左右 ⌘ 都能设，双击 ⌘ 弹出字母面板。原生 macOS，约 15 MB 内存，开源免费。">
+<link rel="canonical" href="{{CANONICAL}}">
+<link rel="alternate" hreflang="zh-CN" href="https://initials.tianli.cyou/">
+<link rel="alternate" hreflang="en" href="https://initials.tianli.cyou/en/">
+<link rel="alternate" hreflang="x-default" href="https://initials.tianli.cyou/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Initials · 一个键切到任何 app">
+<meta property="og:description" content="给常用 app 各指定一个字母。原生 macOS 菜单栏工具，免费、MIT 开源，无需联网。">
+<meta property="og:url" content="{{CANONICAL}}">
+<meta property="og:locale" content="{{OG_LOCALE}}">
+<meta property="og:image" content="https://initials.tianli.cyou/assets/icon.png">
 <link rel="icon" href="assets/icon.png">
 <style>
 :root{color-scheme:light;--ink:#22303a;--muted:#5d6b75;--accent:#1d7a78;--accent-dark:#155f5d;--coral:#d9654f;--line:#dde6e8;--paper:#f7faf9;--card:#fff;--soft:#e8f2f1;--radius:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
@@ -12,7 +22,7 @@
 html{scroll-behavior:smooth;scroll-padding-top:84px}
 body{margin:0;background:var(--paper);color:var(--ink);font-size:16px;line-height:1.75}
 a{color:inherit;text-underline-offset:4px}
-a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #e3a33f;outline-offset:4px}
+a:focus-visible,button:focus-visible,summary:focus-visible,video:focus-visible{outline:3px solid #e3a33f;outline-offset:4px}
 img{max-width:100%;height:auto;display:block}
 .wrap{width:min(1120px,calc(100% - 64px));margin-inline:auto}
 .skip{position:absolute;top:-80px;left:8px;padding:10px 14px;background:#fff;z-index:30}.skip:focus{top:8px}
@@ -65,6 +75,12 @@ td.me{background:#f1f8f7;font-weight:600}
 .steps li{display:grid;grid-template-columns:52px 1fr;gap:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 26px}
 .steps .n{font-size:28px;font-weight:300;color:#7aa6a4;line-height:1.2}
 .steps h3{margin:0 0 6px;font-size:18px}.steps p{margin:4px 0;color:var(--muted);font-size:15px}
+.video-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.video-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-width:0}
+.video-card video{display:block;width:100%;aspect-ratio:4/3;background:var(--soft);object-fit:contain}
+.video-copy{padding:20px}.video-copy h3{font-size:18px;margin:0 0 8px}.video-copy p{font-size:14px;color:var(--muted);margin:0 0 14px}.video-copy a{font-size:13px;color:var(--accent);font-weight:600}
+.guide-note{padding:15px 18px;border:1px solid #c5dcda;border-radius:12px;background:var(--soft);color:#3f6261;font-size:14px;margin:0 0 26px}
+.guide-links{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:14px;margin-top:24px}
 pre{background:#22303a;color:#e9f1f1;border-radius:12px;padding:16px 18px;overflow-x:auto;font-size:13px;line-height:1.7;margin:10px 0}
 pre code{background:none;padding:0;color:inherit;font-size:inherit}
 .faq details{border-bottom:1px solid var(--line);padding:16px 0}
@@ -76,8 +92,8 @@ pre code{background:none;padding:0;color:inherit;font-size:inherit}
 footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding-block:26px 40px;font-size:13px;color:var(--muted)}
 footer strong{color:var(--ink)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-@media(max-width:900px){.hero,.modes,.shots{grid-template-columns:1fr;gap:28px}.strip{grid-template-columns:1fr 1fr}.topbar nav{gap:14px}}
-@media(max-width:640px){.wrap{width:calc(100% - 32px)}.topbar{padding:10px 16px;flex-wrap:wrap;gap:8px}.topbar nav{order:3;width:100%;justify-content:space-between;margin:0;font-size:13px}.topbar .button{margin-left:auto}.hero{padding-block:34px}.lead{font-size:16px}.stage{padding:16px}.section{padding-block:50px}.strip{grid-template-columns:1fr;gap:16px}.mode{padding:20px}.steps li{grid-template-columns:1fr;gap:4px;padding:18px}table{font-size:12px}th,td{padding:8px}.compare-wrap{overflow-x:auto}}
+@media(max-width:900px){.hero,.modes,.shots,.video-grid{grid-template-columns:1fr;gap:28px}.strip{grid-template-columns:1fr 1fr}.topbar nav{gap:14px}.video-card{max-width:680px;margin-inline:auto;width:100%}}
+@media(max-width:640px){.wrap{width:calc(100% - 32px)}.topbar{padding:10px 16px;flex-wrap:wrap;gap:8px}.topbar nav{order:3;width:100%;flex-wrap:wrap;justify-content:flex-start;margin:0;font-size:13px}.topbar .button{margin-left:auto}.hero{padding-block:34px}.lead{font-size:16px}.stage{padding:16px}.section{padding-block:50px}.strip{grid-template-columns:1fr;gap:16px}.mode{padding:20px}.steps li{grid-template-columns:1fr;gap:4px;padding:18px}table{font-size:12px}th,td{padding:8px}.compare-wrap{overflow-x:auto}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
@@ -85,7 +101,7 @@ footer strong{color:var(--ink)}
 <a class="skip" href="#how">跳到用法</a>
 <header class="topbar">
   <a class="brand" href="#"><img src="assets/icon.png" alt="" width="32" height="32"><span>Initials</span></a>
-  <nav aria-label="主导航"><a href="#how">用法</a><a href="#settings">设置</a><a href="#compare">对比</a><a href="#install">安装</a><a href="#cli">命令行</a><a href="#help">问题</a></nav>
+  <nav aria-label="主导航"><a href="#how">用法</a><a href="#settings">设置</a><a href="#demo">看导览</a><a href="#install">安装</a><a href="#help">问题</a><a class="language-switch" href="/en/" lang="en">English</a></nav>
   <a class="button small" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>下载 <span aria-hidden="true">↓</span></a>
 </header>
 
@@ -97,10 +113,10 @@ footer strong{color:var(--ink)}
     <p class="lead">给常用 app 各指定一个字母。<kbd>右⌘</kbd>+<kbd>M</kbd> 切到音乐，再按一次就隐藏。不用找 Dock，也不用在 ⌘Tab 里一个个翻。左边的 ⌘ 也能按住直达，或者快速按两下弹出字母面板，看一眼就知道按哪个。</p>
     <div class="hero-actions">
       <a class="button" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>免费下载 Mac 版 <span aria-hidden="true">↓</span></a>
-      <a class="button ghost" href="#how">先看怎么用</a>
+      <a class="button ghost" href="#demo">先看视频导览</a>
     </div>
     <p class="fine">v{{VERSION}} · {{SIZE}} MB · macOS 14 或更新 · Apple Silicon<br>Developer ID 签名，已通过 Apple 公证</p>
-    <div class="chips"><span>左右 ⌘ 都能用</span><span>⌘C、⌘V 照常</span><span>约 15 MB 内存</span><span>附带命令行</span></div>
+    <div class="chips"><span>左右 ⌘ 都能用</span><span>默认保留 ⌘C、⌘V</span><span>约 15 MB 内存</span><span>附带命令行</span></div>
   </div>
   <div class="stage">
     <img src="assets/picker-zh.png" alt="双击左 ⌘ 后出现的字母面板：C Calendar、F Finder、M Music、S Safari 等" width="410" height="189" fetchpriority="high">
@@ -121,7 +137,7 @@ footer strong{color:var(--ink)}
     <h2>按住直达，双击看着选。</h2>
     <p>左右两个 ⌘ 各自决定怎么用：按住 + 字母、双击弹面板，或者两样都开。默认是右 ⌘ 按住、左 ⌘ 双击；想用左手，把左 ⌘ 的“按住”也打开就行。</p>
   </div>
-  <img class="scene" src="assets/scene-keys-zh.png" alt="键盘上左右两个 ⌘ 都可设置：按住右 ⌘ + M 切到音乐，按住左 ⌘ + K 切到 Keynote，双击任一 ⌘ 弹出字母面板" width="1100" height="560" loading="lazy">
+  <img class="scene" data-locale="zh" src="assets/scene-keys-zh.png" alt="键盘上左右两个 ⌘ 都可设置：按住右 ⌘ + M 切到音乐，按住左 ⌘ + K 切到 Keynote，双击任一 ⌘ 弹出字母面板" width="1100" height="560" loading="lazy">
   <div class="modes">
     <article class="mode">
       <h3>按住 ⌘ + 字母</h3>
@@ -175,7 +191,7 @@ footer strong{color:var(--ink)}
   <div class="section-title">
     <p class="eyebrow">和同类工具比</p>
     <h2>只做切 app 这一件事。</h2>
-    <p>下表根据各项目公开的说明整理；资源占用只列了 Initials 自己的实测。</p>
+    <p>2026-09-24 核对各项目官方说明；资源占用只列了 Initials 自己的实测，不代表跨产品性能比较。</p>
   </div>
   <div class="compare-wrap">
   <table>
@@ -184,7 +200,7 @@ footer strong{color:var(--ink)}
       <tr><td>怎么切</td><td class="me">左右 ⌘ 都可：按住 + 字母直达、双击弹面板，可同时开</td><td>右 ⌘ + 字母</td><td>按右 ⌘ 弹面板，再按字母</td><td>右 ⌥ + 字母</td><td>每个 app 单独录一个组合键</td></tr>
       <tr><td>没指定的字母</td><td class="me">在同首字母的运行中 app 间轮换</td><td>按首字母</td><td>按首字母</td><td>临时分配给运行中的 app</td><td>—</td></tr>
       <tr><td>另外的功能</td><td class="me">命令行；从 Hammerspoon 导入</td><td>见其官网</td><td>屏幕文字搜索、Vimium 式点击、滚动模式</td><td>提示面板</td><td>—</td></tr>
-      <tr><td>源码</td><td class="me">开源 · MIT</td><td>闭源</td><td>开源 · Apache-2.0</td><td>开源</td><td>开源</td></tr>
+      <tr><td>源码</td><td class="me">开源 · MIT</td><td>见其官网</td><td>开源 · Apache-2.0</td><td>公开源码</td><td>开源 · MIT</td></tr>
     </tbody>
   </table>
   </div>
@@ -204,6 +220,42 @@ footer strong{color:var(--ink)}
       <li><span class="n">3</span><div><h3>给字母指定 app</h3><p>点 <strong>添加…</strong> 选 app 并挑字母。已经在用 Hammerspoon rcmd 的，点 <strong>从 Hammerspoon 导入</strong>，确认好用之后再点 <strong>关闭 Hammerspoon rcmd</strong>，免得两边同时处理同一个键。</p></div></li>
     </ol>
   </div>
+</section>
+
+<section id="demo" class="section wrap">
+  <div class="section-title">
+    <p class="eyebrow">三个功能片段 · 中文步骤字幕</p>
+    <h2>先认清界面，<br>再设成自己的习惯。</h2>
+    <p>从右侧字母表，到字母面板，再到左侧独立配置。每段可以暂停、拖动、全屏或下载；静音，无须打开声音。</p>
+  </div>
+  <p class="guide-note"><strong>真实界面离屏导览，示例配置；非连续实机录屏。</strong>画面由 Initials 1.1.0 的原生视图离屏渲染，只含 Apple 应用，并配有标注的局部放大。它说明设置与面板，不演示真实全局切换、隐藏应用或辅助功能授权成功。</p>
+  <div class="video-grid">
+    <article class="video-card">
+      <video controls playsinline preload="none" poster="media/right.jpg" aria-label="右 Command 字母表离屏导览">
+        <source src="media/right.mp4" type="video/mp4">
+        <track kind="captions" src="media/right.vtt" srclang="zh" label="中文">
+        你的浏览器不支持视频，请使用下方下载链接。
+      </video>
+      <div class="video-copy"><h3>01 · 右 ⌘ 的字母表</h3><p>18 秒 · 看懂字母与 app 的对应关系，以及按住、双击两个开关。</p><a href="media/right.mp4" download>下载这一段 ↓</a></div>
+    </article>
+    <article class="video-card">
+      <video controls playsinline preload="none" poster="media/panel.jpg" aria-label="字母面板明暗色离屏导览">
+        <source src="media/panel.mp4" type="video/mp4">
+        <track kind="captions" src="media/panel.vtt" srclang="zh" label="中文">
+        你的浏览器不支持视频，请使用下方下载链接。
+      </video>
+      <div class="video-copy"><h3>02 · 看懂字母面板</h3><p>14 秒 · 对照字母、应用名称和底部提示，查看浅色与深色界面。</p><a href="media/panel.mp4" download>下载这一段 ↓</a></div>
+    </article>
+    <article class="video-card">
+      <video controls playsinline preload="none" poster="media/left.jpg" aria-label="左 Command 独立字母表离屏导览">
+        <source src="media/left.mp4" type="video/mp4">
+        <track kind="captions" src="media/left.vtt" srclang="zh" label="中文">
+        你的浏览器不支持视频，请使用下方下载链接。
+      </video>
+      <div class="video-copy"><h3>03 · 左 ⌘ 单独一张表</h3><p>18 秒 · 了解共用选项和独立字母表。本例仅用 J、K、Y，不占用 C、V。</p><a href="media/left.mp4" download>下载这一段 ↓</a></div>
+    </article>
+  </div>
+  <div class="guide-links"><a href="media/tutorial.mp4" download>下载完整三段导览（50 秒）↓</a><a href="media/tutorial.vtt" download>下载中文字幕</a><a href="media/guide.json">查看素材版本与范围</a></div>
 </section>
 
 <section id="cli" class="section wrap">
@@ -230,10 +282,14 @@ initials tap off --side left       # 关掉双击左 ⌘</code></pre>
     <details><summary>按右 ⌘ + 字母没反应</summary><p>先看菜单栏的 ⌘ 图标：变灰说明还没授权或已暂停。打开设置，顶部如果提示需要授权，点“打开辅助功能设置…”打开开关。也可以在终端运行 <code>initials status</code>，看 intercepting 是不是 yes。</p></details>
     <details><summary>装了新版本以后又不灵了</summary><p>macOS 有时会让旧的授权失效。到“辅助功能”列表里把 Initials 关掉再打开；还不行就用“−”删掉，再重新添加。</p></details>
     <details><summary>双击左 ⌘ 太容易误触，或者总是触发不了</summary><p>两下之间和每一下的时长默认都是 0.3 秒以内。不需要这个功能，可以在设置的“左 ⌘”页取消“快速按两下左 ⌘”，或者运行 <code>initials tap off --side left</code>。</p></details>
-    <details><summary>和 Hammerspoon / rcmd 同时装会冲突吗</summary><p>字母一样时，两边做的事一样，谁先收到都行。确认 Initials 好用后，在设置里点“关闭 Hammerspoon rcmd”，只留一个处理。以后想恢复，点同一个按钮。</p></details>
-    <details><summary>用中文输入法时字母对不上</summary><p>Initials 按键盘上印的英文字母判断，和当前用什么输入法无关。</p></details>
+    <details><summary>和 Hammerspoon / rcmd 同时装会冲突吗</summary><p>两个工具可能同时处理同一个键。确认 Initials 好用后，在设置里点“关闭 Hammerspoon rcmd”，只留一个处理。以后想恢复，点同一个按钮。</p></details>
+    <details><summary>用中文输入法时字母对不上</summary><p>Initials 按物理键码映射字母，不随当前输入法变化。非 QWERTY 键盘布局上的字母可能与键帽不同。</p></details>
     <details><summary>想让某个右 ⌘ + 字母留给当前 app 用</summary><p>右 ⌘ 同时按 ⇧、⌥ 或 ⌃ 时不会被拦截。要完全停用右 ⌘ 这一边，运行 <code>initials disable right</code>。</p></details>
     <details><summary>打开左 ⌘ 按住后，⌘C、⌘V 会不会失灵</summary><p>左 ⌘ 按住只接管字母表里指定了 app 的字母，其余快捷键照常。默认左 ⌘ 和右 ⌘ 共用一张表，如果表里有 C、V、W 之类的字母，设置窗和 <code>initials list</code> 都会标出被占用的快捷键；这时关掉“使用与右 ⌘ 相同的字母”，给左边单独设几个不常用的字母即可。</p></details>
+    <details><summary>支持 Intel Mac、Windows 或 Linux 吗</summary><p>当前下载包只支持 Apple Silicon 和 macOS 14 或更新版本，没有 Intel、Windows 或 Linux 安装包。</p></details>
+    <details><summary>免费吗？需要账号或联网吗</summary><p>Initials 免费，源码采用 MIT 许可。应用无需账号或网络，不记录输入。下载和查看本网站需要联网。</p></details>
+    <details><summary>网站会跟踪我的使用吗</summary><p>本页没有第三方追踪脚本，不设置分析 Cookie。服务器保留正常访问日志，并汇总页面访问与下载请求，用于运行维护和推广评估；这些汇总不识别跨会话用户，也不跟踪应用内的使用。</p></details>
+    <details><summary>怎样反馈问题</summary><p>在 <a href="https://github.com/zengtianli/initials/issues">GitHub Issues</a> 描述 macOS 版本、Initials 版本、相关开关和复现步骤。请勿贴出私密输入或完整个人配置。</p></details>
   </div>
 </section>
 
@@ -248,8 +304,15 @@ initials tap off --side left       # 关掉双击左 ⌘</code></pre>
 
 <footer class="wrap">
   <div><strong>Initials</strong> · 由 <a href="https://github.com/zengtianli">zengtianli</a> 维护 · MIT 开源</div>
-  <div><a href="https://github.com/zengtianli/initials">源代码</a> · <a href="https://github.com/zengtianli/initials/blob/main/README_EN.md">English</a></div>
-  <div>本页不使用分析追踪或外部字体。</div>
+  <div><a href="https://github.com/zengtianli/initials">源代码</a> · <a class="language-switch" href="/en/" lang="en">English</a></div>
+  <div>无第三方追踪脚本、分析 Cookie 或外部字体。访问日志说明见常见问题。</div>
 </footer>
+<script>
+for (const video of document.querySelectorAll('video')) {
+  video.addEventListener('play', () => {
+    for (const other of document.querySelectorAll('video')) if (other !== video) other.pause();
+  });
+}
+</script>
 </body>
 </html>

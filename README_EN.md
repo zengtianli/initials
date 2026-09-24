@@ -2,6 +2,8 @@
 
 [中文](README.md) | **English**
 
+[Website, download and installation guide](https://initials.tianli.cyou/en/)
+
 Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap ⌘** to show a letter panel, then press a letter. Left and right ⌘ are set up separately and can be used together. Native macOS (Swift + AppKit), lives in the menu bar, about 15 MB of memory, with a matching `initials` command-line tool.
 
 ## How it works
