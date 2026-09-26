@@ -6,6 +6,22 @@
 
 Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap ⌘** to show a letter panel, then press a letter. Left and right ⌘ are set up separately and can be used together. Native macOS (Swift + AppKit), lives in the menu bar, about 15 MB of memory, with a matching `initials` command-line tool.
 
+<!-- lightweight:start -->
+## Lightweight (measured)
+
+| Download | Idle memory | Idle CPU | Start to letter-panel offscreen render completed (including PNG export) |
+|---|---|---|---|
+| **1.8 MB** (installed 2.0 MB) | **13 MB** | **0.00%** | **99 ms** |
+
+Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.
+
+Memory conditions: 13 MB phys_footprint for the main process and helpers; original configuration and Accessibility permission retained.
+
+CPU conditions: Installed build restarted in the background after over 10 minutes of input inactivity; settled 45 s, sampled 60 s. CPU time delta was below the timer resolution and is shown as 0.00%.
+
+<sub>v1.1.1 · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-09-26. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<!-- lightweight:end -->
+
 ## How it works
 
 Each ⌘ key has two switches; turn on either or both. Default: right ⌘ is held, left ⌘ is double-tapped.

@@ -1,0 +1,16 @@
+{
+  "scope": "Installed release, production PickerPanel.entries + fill/layout + Retina PNG export; no event tap, focus, clipboard or synthetic keyboard input. Includes process start and PNG encoding, not foreground app-switch latency.",
+  "binary_sha256": "94dca5c03164ffc821ca6b821d3dd2085e94a69b322b606dddd16ca639818d4a",
+  "samples_ms": [
+    109.524,
+    106.344,
+    106.214,
+    116.301,
+    104.494,
+    103.159,
+    109.788
+  ],
+  "median_ms": 106.3,
+  "runs": 7,
+  "warmup_runs": 1
+}

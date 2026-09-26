@@ -1,6 +1,6 @@
 {
   "Initials · 一个键切到任何 app": "Initials · Switch Mac apps with a letter",
-  "Initials：按住 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；左右 ⌘ 都能设，双击 ⌘ 弹出字母面板。原生 macOS，约 15 MB 内存，开源免费。": "Assign a letter to your favorite Mac apps. Hold Command to switch, open or hide them, or double-tap for a letter panel. Free, open source, native macOS.",
+  "Initials：按住 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；左右 ⌘ 都能设，双击 ⌘ 弹出字母面板。原生 macOS，约 {{LW_MEMORY}} MB 内存，开源免费。": "Assign a letter to your favorite Mac apps. Hold Command to switch, open or hide them, or double-tap for a letter panel. Free, open source, native macOS. About {{LW_MEMORY}} MB idle memory.",
   "给常用 app 各指定一个字母。原生 macOS 菜单栏工具，免费、MIT 开源，无需联网。": "Give each favorite app a letter. A free, MIT-licensed native Mac menu bar utility that works offline.",
   "跳到用法": "Skip to how it works",
   "主导航": "Main navigation",
@@ -25,7 +25,8 @@
   "Developer ID 签名，已通过 Apple 公证": "Developer ID signed and notarized by Apple",
   "左右 ⌘ 都能用": "Both Command keys",
   "默认保留 ⌘C、⌘V": "Default setup preserves ⌘C / ⌘V",
-  "约 15 MB 内存": "About 15 MB memory",
+  "约 {{LW_MEMORY}} MB 内存": "About {{LW_MEMORY}} MB memory",
+  "引擎微基准：约 6 ns/次（build.sh 内置基准），只计纯状态机的按键判断，不含事件分发、应用启动或切换；实际操作延迟未测。": "Engine microbenchmark: about 6 ns per decision (the benchmark in build.sh). This measures only the pure state machine's key decision, excluding event delivery, app launch and switching. End-to-end operation latency has not been measured.",
   "附带命令行": "CLI included",
   "双击左 ⌘ 后出现的字母面板：C Calendar、F Finder、M Music、S Safari 等": "The native letter panel in English: C for Calendar, F for Finder, M for Music and S for Safari",
   "弹出面板 → 按": " opens the panel → press ",

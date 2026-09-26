@@ -241,5 +241,12 @@
       "sha256": "ef6ed439011475d7ef9cc05939fb476019d830845eaf694ed2a6513063424c11",
       "bytes": 1591
     }
-  ]
+  ],
+  "reused_for": {
+    "1.1.1 (3)": {
+      "reviewed_at": "2026-09-26",
+      "reason": "当前Sources/App、Sources/Shared和Resources与已发布1.1.0相同；1.1.1仅更新版本与构建/安装流程。沿用原1.1.0的真实离屏界面导览，不声称本轮新录，也不声称验证过真实按键切换。",
+      "verification": "git diff dac8142 in public source export: no changes under Sources/App, Sources/Shared, Resources"
+    }
+  }
 }

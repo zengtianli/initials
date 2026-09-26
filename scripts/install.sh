@@ -3,10 +3,10 @@
 # and links the `initials` CLI into ~/.local/bin.
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$DIR/build/Initials.app"
+SRC="${INITIALS_BUILD_DIR:-$DIR/build}/Initials.app"
 DEST="/Applications/Initials.app"
 test -d "$SRC" || { echo "Build first: bash build.sh" >&2; exit 1; }
-if pgrep -xq Initials; then echo "Initials is running. Quit it (menu bar ⌘ icon → Quit) before replacing the installed app." >&2; exit 1; fi
+if pgrep -fq '^/Applications/Initials.app/Contents/MacOS/Initials([[:space:]]|$)'; then echo "Installed Initials is running. Quit it before replacing the installed app." >&2; exit 1; fi
 if [ -d "$DEST" ]; then
   mkdir -p "$DIR/build/installed-backup"
   rm -rf "$DIR/build/installed-backup/Initials.app"

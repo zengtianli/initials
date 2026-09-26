@@ -7,11 +7,11 @@ Gatekeeper → write build/release.json. Never rebuilds; run build.sh and
 scripts/install.sh first. Credentials come from the existing App Store Connect
 team key (same source as other apps); nothing secret is printed.
 """
-import hashlib, json, pathlib, plistlib, subprocess, sys, tempfile
+import hashlib, json, os, pathlib, plistlib, subprocess, sys, tempfile
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-BUILD = ROOT / "build"
+BUILD = pathlib.Path(os.environ.get("INITIALS_BUILD_DIR", ROOT / "build")).resolve()
 APP = BUILD / "Initials.app"
 INSTALLED = pathlib.Path("/Applications/Initials.app")
 

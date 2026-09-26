@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Initials · 一个键切到任何 app</title>
-<meta name="description" content="Initials：按住 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；左右 ⌘ 都能设，双击 ⌘ 弹出字母面板。原生 macOS，约 15 MB 内存，开源免费。">
+<meta name="description" content="Initials：按住 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；左右 ⌘ 都能设，双击 ⌘ 弹出字母面板。原生 macOS，约 {{LW_MEMORY}} MB 内存，开源免费。">
 <link rel="canonical" href="{{CANONICAL}}">
 <link rel="alternate" hreflang="zh-CN" href="https://initials.tianli.cyou/">
 <link rel="alternate" hreflang="en" href="https://initials.tianli.cyou/en/">
@@ -116,7 +116,7 @@ footer strong{color:var(--ink)}
       <a class="button ghost" href="#demo">先看视频导览</a>
     </div>
     <p class="fine">v{{VERSION}} · {{SIZE}} MB · macOS 14 或更新 · Apple Silicon<br>Developer ID 签名，已通过 Apple 公证</p>
-    <div class="chips"><span>左右 ⌘ 都能用</span><span>默认保留 ⌘C、⌘V</span><span>约 15 MB 内存</span><span>附带命令行</span></div>
+    <div class="chips"><span>左右 ⌘ 都能用</span><span>默认保留 ⌘C、⌘V</span><span>约 {{LW_MEMORY}} MB 内存</span><span>附带命令行</span></div>
   </div>
   <div class="stage">
     <img src="assets/picker-zh.png" alt="双击左 ⌘ 后出现的字母面板：C Calendar、F Finder、M Music、S Safari 等" width="410" height="189" fetchpriority="high">
@@ -124,12 +124,8 @@ footer strong{color:var(--ink)}
   </div>
 </section>
 
-<section class="strip wrap" aria-label="实测数据">
-  <article><b>≈ 15 MB</b><h2>内存占用</h2><p>活动监视器口径（物理内存），菜单栏常驻。</p></article>
-  <article><b>≈ 0%</b><h2>空闲 CPU</h2><p>不轮询按键，只在你按键时由系统回调；实测空闲 1 分钟用 0.04 秒 CPU。</p></article>
-  <article><b>≈ 6 ns</b><h2>每次按键的判断</h2><p>拦截回调里只做几次比较，切换动作放到之后执行。</p></article>
-  <article><b>{{SIZE}} MB</b><h2>安装包</h2><p>纯 Swift + AppKit，没有内置浏览器或运行时。</p></article>
-</section>
+{{LIGHTWEIGHT}}
+<p class="wrap note">引擎微基准：约 6 ns/次（build.sh 内置基准），只计纯状态机的按键判断，不含事件分发、应用启动或切换；实际操作延迟未测。</p>
 
 <section id="how" class="section wrap">
   <div class="section-title">

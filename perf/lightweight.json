@@ -1,0 +1,113 @@
+{
+  "product": "initials",
+  "version": "1.1.1",
+  "measured_at": "2026-09-26",
+  "device": "Mac16,12 / Apple M4 / macOS 27.2",
+  "size": {
+    "download_bytes": 1807939,
+    "installed_bytes": 2002944
+  },
+  "compare": [],
+  "env_note": "2026-09-26 主会话逐个顺序测量，负载均值 36.39 25.92 31.08；total = 20480.00M  used = 18911.69M  free = 1568.31M（开始时）；启动时间受负载影响，内存与 CPU 为进程自身数值",
+  "why": "纯 AppKit，零第三方依赖；按键由系统事件回调送达，回调里只做几次比较，切换动作放到回调外执行；配置改动由 kqueue 通知、不轮询，仅每 30 秒确认一次按键监听仍开着。",
+  "why_en": "Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.",
+  "history": [
+    {
+      "section": "idle",
+      "replaced_on": "2026-09-26",
+      "reason": "统一口径：静置 45 秒 + 主进程、辅助进程与子进程合计，低负载重测",
+      "value": {
+        "process": "/Applications/Initials.app/Contents/MacOS/Initials",
+        "footprint_mb": 14.0,
+        "cpu_pct": 0.08,
+        "window_s": 60,
+        "method": "open -g -j 后台启动，静置 15 秒后 footprint 采样 60 秒（phys_footprint，活动监视器「内存」列同口径）；CPU = 进程 CPU 时间增量 ÷ 墙钟"
+      }
+    },
+    {
+      "version": "1.1.0",
+      "idle": {
+        "process": "/Applications/Initials.app/Contents/MacOS/Initials",
+        "footprint_mb": 15.0,
+        "main_footprint_mb": 15.0,
+        "cpu_pct": 0.0,
+        "main_cpu_pct": 0.0,
+        "processes": [
+          {
+            "name": "main",
+            "cpu_pct": 0.0,
+            "footprint_peak_mb": 15.0
+          }
+        ],
+        "window_s": 60,
+        "settle_s": null,
+        "measured_at": "2026-09-26",
+        "method": "对已长时间运行的实例直接 measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟",
+        "load": "负载均值 34.38 27.52 31.27；total = 17408.00M  used = 16365.81M  free = 1042.19M"
+      },
+      "speed_gui": [
+        {
+          "key": "picker_offscreen_end_to_end",
+          "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+          "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+          "median_ms": 98.7,
+          "runs": 7,
+          "headline": true,
+          "method": "已安装发行版 --snapshot --picker --right；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
+          "raw": "perf/raw/picker-operation-1.1.1.json"
+        }
+      ]
+    }
+  ],
+  "speed_gui": [
+    {
+      "key": "picker_offscreen_end_to_end",
+      "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+      "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+      "median_ms": 98.7,
+      "runs": 7,
+      "headline": true,
+      "method": "已安装发行版 --snapshot --picker --right；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
+      "raw": "perf/raw/picker-operation-1.1.1.json"
+    }
+  ],
+  "measured_artifact": {
+    "version": "1.1.1",
+    "build": "3",
+    "executable_sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b"
+  },
+  "not_measured": [
+    "新装1.1.1常驻内存与CPU等待不打断输入的安全切换；不把仍运行的1.1.0采样记为新版本。"
+  ],
+  "measurement_history": [
+    {
+      "replaced_at": "2026-09-26",
+      "version": "1.1.1",
+      "idle": null,
+      "reason": "Replaced old-process measurement with actual installed 1.1.1 runtime, accessibility and event tap confirmed"
+    }
+  ],
+  "idle": {
+    "process": "Installed Initials 1.1.1 + helpers",
+    "footprint_mb": 13.0,
+    "main_footprint_mb": 13.0,
+    "cpu_pct": 0.0,
+    "main_cpu_pct": 0.0,
+    "processes": [
+      {
+        "pid": 31996,
+        "name": "main",
+        "cpu_pct": 0.0,
+        "footprint_peak_mb": 13.0
+      }
+    ],
+    "window_s": 60,
+    "scope": "主进程 + XPC 辅助进程 + 子进程合计",
+    "settle_s": 45,
+    "method": "installed signed release, background restart after >10 minutes HID idle; original keyboard config preserved; settle45s then helper-inclusive60s CPU window; footprint sampled after window",
+    "cpu_note": "安装版在输入设备闲置超过10分钟后后台切换；静置45秒后测60秒，CPU时间增量低于本次计时分辨率，显示0.00%。",
+    "cpu_note_en": "Installed build restarted in the background after over 10 minutes of input inactivity; settled 45 s, sampled 60 s. CPU time delta was below the timer resolution and is shown as 0.00%.",
+    "memory_note": "活动监视器同口径 phys_footprint，主进程与辅助进程合计13 MB；原配置与辅助功能权限保留。",
+    "memory_note_en": "13 MB phys_footprint for the main process and helpers; original configuration and Accessibility permission retained."
+  }
+}

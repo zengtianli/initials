@@ -1,0 +1,16 @@
+{
+  "version": "1.1.1",
+  "samples_ms": [
+    99.88645900011761,
+    95.08445800020127,
+    96.20233300029213,
+    101.59145800025726,
+    100.97683399999369,
+    98.26854099992488,
+    98.65704100047878
+  ],
+  "median_ms": 98.7,
+  "runs": 7,
+  "binary_sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b",
+  "method": "production snapshot picker entries/fill/layout and PNG export; no event tap"
+}

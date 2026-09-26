@@ -14,12 +14,16 @@ APPSRC=(); while IFS= read -r f; do APPSRC+=("$f"); done < <(list Sources/App)
 CLISRC=(); while IFS= read -r f; do CLISRC+=("$f"); done < <(list Sources/CLI)
 TESTSRC=(); while IFS= read -r f; do TESTSRC+=("$f"); done < <(list Tests)
 
-mkdir -p build
-STAGE="$(mktemp -d "$DIR/build/compile.XXXXXX")"
+BUILD_DIR="${INITIALS_BUILD_DIR:-$DIR/build}"
+mkdir -p "$BUILD_DIR"
+STAGE="$(mktemp -d "$BUILD_DIR/compile.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
 
 "${SWIFTC[@]}" "${SHARED[@]}" "${TESTSRC[@]}" -o "$STAGE/tests"
 "$STAGE/tests"
+if [ "${1:-}" = '--test-only' ]; then
+  exit 0
+fi
 
 APP="$STAGE/Initials.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/bin"
@@ -46,9 +50,9 @@ test "$(lipo -archs "$APP/Contents/MacOS/Initials")" = arm64
 "$APP/Contents/MacOS/Initials" --version
 "$APP/Contents/Resources/bin/initials" --version
 
-if [ -e build/Initials.app ]; then
-  rm -rf build/Initials.previous.app
-  mv build/Initials.app build/Initials.previous.app
+if [ -e "$BUILD_DIR/Initials.app" ]; then
+  rm -rf "$BUILD_DIR/Initials.previous.app"
+  mv "$BUILD_DIR/Initials.app" "$BUILD_DIR/Initials.previous.app"
 fi
-mv "$APP" build/Initials.app
-echo "Built: $DIR/build/Initials.app"
+mv "$APP" "$BUILD_DIR/Initials.app"
+echo "Built: $BUILD_DIR/Initials.app"

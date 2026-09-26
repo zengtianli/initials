@@ -1,0 +1,26 @@
+{
+  "idle": {
+    "process": "31996",
+    "footprint_mb": 13.0,
+    "main_footprint_mb": 13.0,
+    "cpu_pct": 0.0,
+    "main_cpu_pct": 0.0,
+    "processes": [
+      {
+        "pid": 31996,
+        "name": "main",
+        "cpu_pct": 0.0,
+        "footprint_peak_mb": 13.0
+      }
+    ],
+    "window_s": 60,
+    "scope": "主进程 + XPC 辅助进程 + 子进程合计",
+    "settle_s": 45,
+    "method": "installed signed release, background restart after >10 minutes HID idle; original keyboard config preserved; settle45s then helper-inclusive60s CPU window; footprint sampled after window"
+  },
+  "runtime_status": {
+    "version": "1.1.1",
+    "tapEnabled": true,
+    "accessibilityTrusted": true
+  }
+}

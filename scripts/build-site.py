@@ -11,8 +11,11 @@ import json
 import pathlib
 import re
 import shutil
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT.parent / "apps-portal/site"))
+from perf_block import load as load_perf, standalone_section
 ORIGIN = "https://initials.tianli.cyou"
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
@@ -89,6 +92,9 @@ class EnglishPage(HTMLParser):
 
 def main():
     release = json.loads((ROOT / "build/release.json").read_text())
+    perf = load_perf({"repo": str(ROOT)})
+    if not perf or perf["version"].split(" ")[0] != release["version"]:
+        raise SystemExit("perf/lightweight.json must measure the current release")
     dmg = ROOT / release["artifact_path"]
     if hashlib.sha256(dmg.read_bytes()).hexdigest() != release["sha256"]:
         raise SystemExit("DMG does not match build/release.json; rerun scripts/release.py")
@@ -113,7 +119,10 @@ def main():
         destination.parent.mkdir(parents=True, exist_ok=True)
         values = {"VERSION": release["version"], "SIZE": f"{release['size_bytes'] / 1_000_000:.1f}",
                   "SHA256": release["sha256"], "LANG": lang, "CANONICAL": canonical,
-                  "OG_LOCALE": og_locale}
+                  "OG_LOCALE": og_locale,
+                  "LW_MEMORY": perf["memory"] or ("未测" if lang == "zh-CN" else "Unmeasured"),
+                  "LIGHTWEIGHT": standalone_section(ROOT / "perf/lightweight.json", release["version"],
+                                                    accent="#1d7a78", lang="zh" if lang == "zh-CN" else "en")}
         for key, value in values.items():
             page = page.replace("{{" + key + "}}", value)
         destination.write_text(page)
