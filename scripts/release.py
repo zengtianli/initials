@@ -60,9 +60,10 @@ def main():
     if "Authority=Developer ID Application:" not in info or "runtime" not in info:
         raise SystemExit("Developer ID signature with hardened runtime required.")
     authority = next(l.removeprefix("Authority=") for l in info.splitlines() if l.startswith("Authority=Developer ID Application:"))
-    version = plistlib.loads((APP / "Contents/Info.plist").read_bytes())["CFBundleShortVersionString"]
+    bundle_info = plistlib.loads((APP / "Contents/Info.plist").read_bytes())
+    version = bundle_info["CFBundleShortVersionString"]
     dmg = BUILD / f"Initials-{version}-arm64.dmg"
-    record = {"version": version, "executable_sha256": sha(APP / exe),
+    record = {"version": version, "build": str(bundle_info["CFBundleVersion"]), "executable_sha256": sha(APP / exe),
               "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
     with tempfile.TemporaryDirectory(prefix="initials-release-") as temp:
