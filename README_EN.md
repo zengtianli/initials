@@ -7,7 +7,7 @@
 Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap ⌘** to show a letter panel, then press a letter. Left and right ⌘ are set up separately and can be used together. Native macOS (Swift + AppKit), lives in the menu bar, about 15 MB of memory, with a matching `initials` command-line tool.
 
 <!-- lightweight:start -->
-## Lightweight (measured)
+## Resource use
 
 | Download | Idle memory | Idle CPU | Start to letter-panel offscreen render completed (including PNG export) |
 |---|---|---|---|
@@ -19,7 +19,7 @@ Memory conditions: 13 MB phys_footprint for the main process and helpers; origin
 
 CPU conditions: Installed build restarted in the background after over 10 minutes of input inactivity; settled 45 s, sampled 60 s. CPU time delta was below the timer resolution and is shown as 0.00%.
 
-<sub>v1.1.1 · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-09-26. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.1.1 · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-09-26. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## How it works

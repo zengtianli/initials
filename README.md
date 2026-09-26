@@ -9,7 +9,7 @@
 ![左右 ⌘ 都可设置：按住 + 字母直达，双击弹出字母面板](site/assets/scene-keys-zh.png)
 
 <!-- lightweight:start -->
-## 轻量（本机实测）
+## 资源占用
 
 | 安装包 | 空闲内存 | 空闲 CPU | 启动到字母面板离屏渲染完成（含 PNG 导出） |
 |---|---|---|---|
@@ -21,7 +21,7 @@
 
 CPU 口径：安装版在输入设备闲置超过10分钟后后台切换；静置45秒后测60秒，CPU时间增量低于本次计时分辨率，显示0.00%。
 
-<sub>v1.1.1 · Mac16,12 / Apple M4 / macOS 27.2 · 2026-09-26 本机实测。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
+<sub>v1.1.1 · Mac16,12 / Apple M4 / macOS 27.2 · 2026-09-26。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
 <!-- lightweight:end -->
 
 ## 用法
