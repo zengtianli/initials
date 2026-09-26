@@ -76,9 +76,6 @@
     "build": "3",
     "executable_sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b"
   },
-  "not_measured": [
-    "新装1.1.1常驻内存与CPU等待不打断输入的安全切换；不把仍运行的1.1.0采样记为新版本。"
-  ],
   "measurement_history": [
     {
       "replaced_at": "2026-09-26",
