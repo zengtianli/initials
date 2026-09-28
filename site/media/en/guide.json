@@ -242,5 +242,31 @@
       "sha256": "a2a7632b88555404d5d6c6d3ff5f639ffcf1dda275f15a0137f457288fc70cb4",
       "bytes": 1605
     }
-  ]
+  ],
+  "reused_for": {
+    "1.1.2 (4)": {
+      "reviewed_at": "2026-09-28",
+      "reason": "沿用 1.1.0 的真实离屏导览。新增离屏界面自检及其关闭守卫，正常运行的按键引擎、切换、监听和界面布局未变；沿用原测量日期、设备和构建哈希，仅供历史参考，1.1.2 尚未重新测量。 不声称重新录制或已演示真实按键、应用切换/隐藏、辅助功能授权。",
+      "reason_en": "Reuse the real 1.1.0 offscreen guide. Only an offscreen UI self-test and its close guard were added; the normal key engine, switching, event monitoring and UI layout are unchanged. Original measurement date, device and build hash are retained for historical reference; 1.1.2 has not been re-measured. No claim of a new recording or demonstrated real keys, app switching/hiding, or Accessibility authorization.",
+      "reviewed_sources_sha256": {
+        "Sources/App/AppDelegate.swift": "edfca96b184dead74ecb16deab26e59f94a472b973fc5fd0b3b8835b11c836dd",
+        "Sources/App/EventTap.swift": "84db9e4095e0b7291844873af27738b41d6a3f473508c45fb24801bf5715c02b",
+        "Sources/App/Launcher.swift": "8f7616f86d95298c8dc93d8fc945fbfb3863ab462666947eed3eb40332fd0112",
+        "Sources/App/PickerPanel.swift": "a2fe916110a0fee3d3d473c5e2f885f0119dca0d542292cf1622ecb1da69a10b",
+        "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
+        "Sources/App/SettingsWindowController.swift": "3ca1deeda83f5243e740c57086b7233c80245394f5b9067069e562ee26e26f70",
+        "Sources/App/Snapshot.swift": "8b091ec2a490895397fc79e31705b87abd1e6ecfaa13983498eff510a2a9c721",
+        "Sources/App/UISelfTest.swift": "a701dc674bbdb50394095b873a2895916c6e7df8b2a645f3a7f52572446a3dc1",
+        "Sources/App/main.swift": "cc73f0e0c55a18b8fe094e4e1df9e170b78983dea39ca35c31614b62464cff45",
+        "Sources/CLI/main.swift": "998efe64b4862b4abf4f7e9bbbb4eaac0e01985f43e96cfdcd50dfbda3177677",
+        "Sources/Shared/AppCatalog.swift": "e34bba3f25237a6c82f1fa6980b9520fa1aa3a3e493e20ac96b4df8f4d0b1e84",
+        "Sources/Shared/Config.swift": "6bca80ddf1401f4345f598aeb2e33d7851dd821aa2ab6223cb93f07cf60ec7c9",
+        "Sources/Shared/Decision.swift": "9a6ad13996a402d5c40021e7a3606890ed3e93a115f24f98d14d6cdf2d19c2a4",
+        "Sources/Shared/Hammerspoon.swift": "98bb958b489a4231f509b6985e7d0babd666ecfc37c79504729fd9db27fe617e",
+        "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
+        "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+      },
+      "verification": "git diff 66a5ebe -- Sources Resources: only SettingsWindowController.swift self-test/close guard, UISelfTest.swift, main.swift self-test entry, and CLI version; prior 1.1.1 reuse review retained."
+    }
+  }
 }

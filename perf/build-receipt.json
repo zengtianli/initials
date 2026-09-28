@@ -1,12 +1,16 @@
 {
   "schema_version": 1,
-  "built_at": "2026-09-26T19:26:06+08:00",
+  "built_at": "2026-09-28T12:45:14+08:00",
   "artifact": {
     "bundle_id": "cyou.tianli.initials",
-    "version": "1.1.1",
-    "build": "3",
+    "version": "1.1.2",
+    "build": "4",
     "executable": "Contents/MacOS/Initials",
-    "sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b"
+    "sha256": "3bc3d6bcaae03021f852c80cd2a1975baa7ecf83ab139cbfef02162775735260",
+    "icon": {
+      "path": "Contents/Resources/AppIcon.icns",
+      "sha256": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+    }
   },
   "source": {
     "input_globs": [
@@ -15,11 +19,11 @@
       "Info.plist",
       "build.sh"
     ],
-    "sha256": "9a5bd72f8bac38cbf29ea048ab843b946fe8f5d92f0c648f06e0b86c19ba0270",
-    "file_count": 18,
-    "commit": "9af2cb96289fd7042c3c2e6e9ea760a6ff9c372e",
+    "sha256": "af168c1f921db68d7f5417d7ba8856cc1fbfd65a448aba0bc2c0615c06c67d62",
+    "file_count": 19,
+    "commit": "695f8d99343282a7fcfa0e6e6635a1d3fc7970a0",
     "dirty_scope": "组件当前 Git 工作树；跨仓/软链输入的实际内容由 sha256 核验",
-    "dirty": true
+    "dirty": false
   },
-  "build_command_sha256": "a71235558ac7c8350fb37bd7769c1b59029f32d28b2c9f0d35a0196b1e479fdd"
+  "build_command_sha256": "235e3fb8fc09bfdddfa608c55b54f82fb8d57d10cf28833058fb1f25cc75b691"
 }

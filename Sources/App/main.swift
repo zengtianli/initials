@@ -5,6 +5,14 @@ if arguments.contains("--version") {
     print("Initials \(appVersion)")
     exit(0)
 }
+// Keep the acceptance process separate from AppDelegate, EventTap and login/menu setup.
+if let i = arguments.firstIndex(of: "--ui-self-test") {
+    guard i + 1 < arguments.count else {
+        fputs("--ui-self-test requires an output directory\n", stderr)
+        exit(2)
+    }
+    UISelfTest.run(to: URL(fileURLWithPath: arguments[i + 1], isDirectory: true))
+}
 // `--simulate right:d,left:m`: print what each letter would do right now, without doing it.
 if let i = arguments.firstIndex(of: "--simulate"), i + 1 < arguments.count {
     let config = (try? ConfigStore.load()) ?? Config()

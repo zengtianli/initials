@@ -7,13 +7,14 @@ Gatekeeper → write build/release.json. Never rebuilds; run build.sh and
 scripts/install.sh first. Credentials come from the existing App Store Connect
 team key (same source as other apps); nothing secret is printed.
 """
-import hashlib, json, os, pathlib, plistlib, subprocess, sys, tempfile
+import glob, hashlib, json, os, pathlib, plistlib, subprocess, sys, tempfile
 from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 BUILD = pathlib.Path(os.environ.get("INITIALS_BUILD_DIR", ROOT / "build")).resolve()
 APP = BUILD / "Initials.app"
 INSTALLED = pathlib.Path("/Applications/Initials.app")
+SOURCE_PATTERNS = {"Sources/**", "Resources/**", "Info.plist", "build.sh"}
 
 
 def run(*args, capture=False):
@@ -22,6 +23,66 @@ def run(*args, capture=False):
 
 def sha(path):
     return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+
+
+def artifact_snapshot(bundle):
+    """Same executable/version/icon identity recorded by Chapter build-receipt."""
+    info = plistlib.loads((bundle / "Contents/Info.plist").read_bytes())
+    executable_name = info["CFBundleExecutable"]
+    icon_name = info.get("CFBundleIconFile")
+    if pathlib.Path(executable_name).name != executable_name or not icon_name or pathlib.Path(icon_name).name != icon_name:
+        raise ValueError("Bundle executable/icon must be resource filenames.")
+    if not pathlib.Path(icon_name).suffix:
+        icon_name += ".icns"
+    executable = "Contents/MacOS/" + executable_name
+    icon = "Contents/Resources/" + icon_name
+    return {"bundle_id": info["CFBundleIdentifier"], "version": str(info["CFBundleShortVersionString"]),
+            "build": str(info["CFBundleVersion"]), "executable": executable, "sha256": sha(bundle / executable),
+            "icon": {"path": icon, "sha256": sha(bundle / icon)}}
+
+
+def verify_provenance():
+    """Read-only preflight, deliberately before credentials or notarization upload."""
+    receipt_path = ROOT / "perf/build-receipt.json"
+    try:
+        receipt = json.loads(receipt_path.read_text())
+        if receipt.get("schema_version") != 1 or not receipt.get("built_at") or not receipt.get("build_command_sha256"):
+            raise ValueError("Build receipt is incomplete; generate it around a fresh build.")
+        source = receipt["source"]
+        patterns = source["input_globs"]
+        if not isinstance(patterns, list) or not SOURCE_PATTERNS.issubset(patterns):
+            raise ValueError("Build receipt must cover Sources, Resources, Info.plist and build.sh.")
+        if any(not isinstance(p, str) or pathlib.Path(p).is_absolute() or ".." in pathlib.Path(p).parts for p in patterns):
+            raise ValueError("Build receipt source globs must stay inside this repository.")
+        files = {}
+        for pattern in patterns:
+            for name in glob.glob(str(ROOT / pattern), recursive=True, include_hidden=True):
+                path = pathlib.Path(name)
+                relative = path.relative_to(ROOT).as_posix()
+                if any(part in {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".git"} for part in path.relative_to(ROOT).parts):
+                    continue
+                if relative in ("perf/build-receipt.json", "perf/runtime-receipt.json"):
+                    raise ValueError("Source inputs cannot include their own receipt.")
+                if path.is_file():
+                    files[relative] = sha(path)
+        digest = hashlib.sha256(json.dumps(files, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        if not files or digest != source["sha256"] or len(files) != source["file_count"]:
+            raise ValueError("Current source inputs differ from the actual build receipt.")
+        def git(*args):
+            return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
+        commit = git("rev-parse", "--verify", "HEAD^{commit}")
+        if source.get("commit") != commit or source.get("dirty") is not False:
+            raise ValueError("Receipt must name the current committed source; rebuild after committing source changes.")
+        if git("status", "--porcelain", "--untracked-files=all", "--", *[f":(glob){p}" for p in patterns]):
+            raise ValueError("Build source scope has uncommitted changes; unrelated project metadata is excluded.")
+        observed = artifact_snapshot(APP)
+        if observed["bundle_id"] != "cyou.tianli.initials" or observed != receipt["artifact"] or artifact_snapshot(INSTALLED) != observed:
+            raise ValueError("Built and installed app executable/version/icon must all match the fresh build receipt.")
+        return {"source_commit": commit, "source_sha256": digest, "artifact": observed,
+                "build_receipt": {"path": "perf/build-receipt.json", "sha256": sha(receipt_path),
+                                  "built_at": receipt["built_at"], "build_command_sha256": receipt["build_command_sha256"]}}
+    except (OSError, ValueError, KeyError, TypeError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(f"Release provenance check failed: {exc}") from None
 
 
 def auth():
@@ -53,6 +114,7 @@ def notarize(payload):
 
 
 def main():
+    provenance = verify_provenance()
     exe = "Contents/MacOS/Initials"
     if not (INSTALLED / exe).exists() or sha(INSTALLED / exe) != sha(APP / exe):
         raise SystemExit("Installed Initials differs from build/Initials.app; run scripts/install.sh and verify first.")
@@ -63,7 +125,7 @@ def main():
     bundle_info = plistlib.loads((APP / "Contents/Info.plist").read_bytes())
     version = bundle_info["CFBundleShortVersionString"]
     dmg = BUILD / f"Initials-{version}-arm64.dmg"
-    record = {"version": version, "build": str(bundle_info["CFBundleVersion"]), "executable_sha256": sha(APP / exe),
+    record = {**provenance, "version": version, "build": str(bundle_info["CFBundleVersion"]), "executable_sha256": sha(APP / exe),
               "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
     with tempfile.TemporaryDirectory(prefix="initials-release-") as temp:

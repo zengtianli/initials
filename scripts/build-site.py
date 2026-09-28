@@ -20,6 +20,44 @@ ORIGIN = "https://initials.tianli.cyou"
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
 
+def performance_reuse(raw, release):
+    """Allow explicitly reviewed historical display, never relabel a measurement."""
+    if raw["version"].split(" ")[0] == release["version"]:
+        return None
+    key = f"{release['version']} ({release.get('build', '')})"
+    reuse = (raw.get("reused_for") or {}).get(key) or {}
+    artifact = raw.get("measured_artifact") or {}
+    sources = sorted(ROOT.glob("Sources/**/*.swift")) + sorted(ROOT.glob("Resources/*"))
+    actual = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+              for p in sources if p.is_file()}
+    valid = (reuse.get("display") == "historical_only"
+             and reuse.get("measured_version") == raw["version"] == artifact.get("version")
+             and reuse.get("measured_executable_sha256") == artifact.get("executable_sha256")
+             and re.fullmatch(r"[0-9a-f]{64}", str(artifact.get("executable_sha256", "")))
+             and reuse.get("reviewed_at") and reuse.get("reason") and reuse.get("reason_en")
+             and reuse.get("reviewed_sources_sha256") == actual)
+    if not valid:
+        raise SystemExit("Historical performance needs an explicit, source-matched review for this release/build")
+    return reuse
+
+
+def lightweight_section(raw, release, reuse, lang):
+    # The shared renderer still receives the measurement's true version. The
+    # repository gate above separately validates the offered release and review.
+    measured = raw["version"].split(" ")[0]
+    block = standalone_section(ROOT / "perf/lightweight.json", measured, accent="#1d7a78", lang=lang)
+    if not reuse:
+        return block
+    zh = lang == "zh"
+    note = (f"以下为 v{measured} 的历史实测，供 v{release['version']} 参考；不是本版本新测。"
+            if zh else f"Historical measurements from v{measured}, shown for reference with v{release['version']}; this release has not been re-measured. ")
+    note += reuse["reason" if zh else "reason_en"]
+    block = block.replace("数字来自所列设备实测，版本更新后重新测量。" if zh else
+                          "Measured on the listed device; re-measured for each version.", escape(note))
+    heading = "资源占用与响应速度。" if zh else "Resource use and response time."
+    return block.replace(heading, f"{heading} (v{escape(measured)})")
+
+
 class EnglishPage(HTMLParser):
     def __init__(self, strings):
         super().__init__(convert_charrefs=False)
@@ -93,8 +131,10 @@ class EnglishPage(HTMLParser):
 def main():
     release = json.loads((ROOT / "build/release.json").read_text())
     perf = load_perf({"repo": str(ROOT)})
-    if not perf or perf["version"].split(" ")[0] != release["version"]:
-        raise SystemExit("perf/lightweight.json must measure the current release")
+    if not perf:
+        raise SystemExit("perf/lightweight.json is required")
+    raw_perf = json.loads((ROOT / "perf/lightweight.json").read_text())
+    reuse = performance_reuse(raw_perf, release)
     dmg = ROOT / release["artifact_path"]
     if hashlib.sha256(dmg.read_bytes()).hexdigest() != release["sha256"]:
         raise SystemExit("DMG does not match build/release.json; rerun scripts/release.py")
@@ -121,8 +161,10 @@ def main():
                   "SHA256": release["sha256"], "LANG": lang, "CANONICAL": canonical,
                   "OG_LOCALE": og_locale,
                   "LW_MEMORY": perf["memory"] or ("未测" if lang == "zh-CN" else "Unmeasured"),
-                  "LIGHTWEIGHT": standalone_section(ROOT / "perf/lightweight.json", release["version"],
-                                                    accent="#1d7a78", lang="zh" if lang == "zh-CN" else "en")}
+                  "LIGHTWEIGHT": lightweight_section(raw_perf, release, reuse, "zh" if lang == "zh-CN" else "en")}
+        if reuse:
+            label = f"（v{raw_perf['version']} 实测）" if lang == "zh-CN" else f" (measured on v{raw_perf['version']})"
+            page = page.replace("{{LW_MEMORY}} MB", "{{LW_MEMORY}} MB" + label)
         for key, value in values.items():
             page = page.replace("{{" + key + "}}", value)
         destination.write_text(page)

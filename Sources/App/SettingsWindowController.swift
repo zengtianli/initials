@@ -59,7 +59,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     }
 
     func windowWillClose(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        if NSApp.activationPolicy() != .prohibited { NSApp.setActivationPolicy(.accessory) }
     }
 
     func replaceConfig(_ config: Config) {
@@ -410,6 +410,64 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     }
 
     // MARK: Offscreen snapshot
+
+    /// Uses the same reload/action methods as the visible settings window. The caller
+    /// must isolate ConfigStore because removing a binding deliberately exercises save.
+    func checkOffscreenInteractions(to directory: URL) throws -> [String: Bool] {
+        precondition(ProcessInfo.processInfo.environment["INITIALS_SUPPORT_DIR"] != nil)
+        var checks: [String: Bool] = [:]
+        checks["settings_initial_table"] = table.numberOfRows == 2 && letters == ["c", "f"] && table.isEnabled
+        selectSide(.left)
+        checks["settings_shared_left"] = table.numberOfRows == 2 && !table.isEnabled && !shareCheck.isHidden
+        var changed = config
+        changed.left.hold = true
+        replaceConfig(changed)
+        checks["settings_conflict_refresh"] = !conflictLabel.isHidden && conflictLabel.stringValue.contains("⌘C")
+        checks["settings_shared_controls_in_bounds"] = try snapshotSelfTestContent(to: directory.appendingPathComponent("settings-shared.png"))
+        changed.left.useRightBindings = false
+        changed.left.bindings = ["f": changed.right.bindings["f"]!]
+        replaceConfig(changed)
+        checks["settings_independent_left"] = table.numberOfRows == 1 && letters == ["f"] && table.isEnabled && conflictLabel.stringValue.contains("⌘F")
+        var callbackCount = 0
+        onChange = { _ in callbackCount += 1 }
+        table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        removeBinding()
+        let persisted = try ConfigStore.load()
+        checks["settings_remove_saved"] = table.numberOfRows == 0 && config.left.bindings.isEmpty
+            && persisted.left.bindings.isEmpty && callbackCount == 1
+        selectSide(.right)
+        refreshStatus()
+        checks["settings_refresh_preserves_right"] = table.numberOfRows == 2 && table.isEnabled && !permissionLabel.stringValue.isEmpty
+        checks["settings_right_controls_in_bounds"] = try snapshotSelfTestContent(to: directory.appendingPathComponent("settings-right.png"))
+        close()
+        checks["settings_close_without_focus"] = window?.isVisible == false && window?.isKeyWindow == false
+            && window?.isMainWindow == false && NSApp.activationPolicy() == .prohibited
+        return checks
+    }
+
+    /// An unshown NSWindow's frame view may retain its previous title-bar geometry
+    /// after a taller settings state. Render the actual content at its fitted size.
+    private func snapshotSelfTestContent(to url: URL) throws -> Bool {
+        window?.appearance = NSAppearance(named: .aqua)
+        hammerspoonLabel.superview?.isHidden = true
+        guard let content = window?.contentView else { return false }
+        // Content alone has no NSThemeFrame to paint the light window background.
+        content.wantsLayer = true
+        content.layer?.backgroundColor = NSColor.white.cgColor
+        content.layoutSubtreeIfNeeded()
+        content.setFrameSize(content.fittingSize)
+        content.layoutSubtreeIfNeeded()
+        var controls: [NSView] = [permissionLabel, sidePicker, sideNote, holdCheck, tapCheck,
+                                   tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck]
+        if !shareCheck.isHidden { controls.append(shareCheck) }
+        if !conflictLabel.isHidden { controls.append(conflictLabel) }
+        let visible = controls.allSatisfy { control in
+            let frame = content.convert(control.bounds, from: control)
+            return frame.width > 0 && frame.height > 0 && content.bounds.insetBy(dx: -1, dy: -1).contains(frame)
+        }
+        try writeRetinaPNG(of: content, to: url)
+        return visible
+    }
 
     func snapshot(side: Side, to url: URL, appearance: NSAppearance?) throws {
         window?.appearance = appearance

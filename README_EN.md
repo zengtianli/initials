@@ -4,14 +4,14 @@
 
 [Website, download and installation guide](https://initials.tianli.cyou/en/)
 
-Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap ⌘** to show a letter panel, then press a letter. Left and right ⌘ are set up separately and can be used together. Native macOS (Swift + AppKit), lives in the menu bar, about 15 MB of memory, with a matching `initials` command-line tool.
+Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap ⌘** to show a letter panel, then press a letter. Left and right ⌘ are set up separately and can be used together. Native macOS (Swift + AppKit), lives in the menu bar, with a matching `initials` command-line tool. See [Resource use](#resource-use) for measurements.
 
 <!-- lightweight:start -->
 ## Resource use
 
 | Download | Idle memory | Idle CPU | Start to letter-panel offscreen render completed (including PNG export) |
 |---|---|---|---|
-| **1.8 MB** (installed 2.0 MB) | **13 MB** | **0.00%** | **99 ms** |
+| **1.8 MB** (installed 2.0 MB) | **13.6 MB** | **0%** | **99 ms** |
 
 Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.
 
@@ -21,6 +21,8 @@ CPU conditions: Installed build restarted in the background after over 10 minute
 
 <sub>v1.1.1 · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-09-26. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
+
+For v1.1.2 (4), the figures above remain historical v1.1.1 measurements from 2026-09-26; this release has not been re-measured. This update adds an offscreen UI self-test and its close guard; the normal key engine, switching, event monitoring and UI layout are unchanged. The table's download size also belongs to v1.1.1; the website download button shows the current artifact size.
 
 ## How it works
 
@@ -62,9 +64,7 @@ Exit codes: 0 ok, 1 not found, 2 usage error, 3 Initials not running (status). C
 
 ## Measured
 
-- Memory: about 15 MB (`footprint`, idle in the menu bar).
-- CPU: about 0.04 s per idle minute; the key decision inside the event tap costs about 6 ns per event (benchmark in `build.sh`); switching runs outside the callback.
-- Download: about 1.8 MB.
+The [Resource use](#resource-use) section is generated from [perf/lightweight.json](perf/lightweight.json), with download size, idle memory, CPU and startup speed, plus the measured version and conditions. `build.sh` also includes a key-decision benchmark; app switching runs outside the event-tap callback.
 
 ## Build
 

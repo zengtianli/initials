@@ -2,7 +2,7 @@ import Foundation
 
 /// `initials` — edits the same config the app watches; the running app picks up
 /// changes within a moment. Exit codes: 0 ok, 1 not found, 2 usage or error.
-let version = "1.1.1"
+let version = "1.1.2"
 
 func fail(_ message: String, code: Int32 = 2) -> Never {
     FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
