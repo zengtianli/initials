@@ -11,15 +11,11 @@ Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap 
 
 | Download | Idle memory | Idle CPU | Start to letter-panel offscreen render completed (including PNG export) |
 |---|---|---|---|
-| **1.8 MB** (installed 2.0 MB) | **13.6 MB** | **0%** | **99 ms** |
+| **1.6 MB** (installed 2.1 MB) | **16.8 MB** | **0%** | **150 ms** |
 
 Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.
 
-Memory conditions: 13 MB phys_footprint for the main process and helpers; original configuration and Accessibility permission retained.
-
-CPU conditions: Installed build restarted in the background after over 10 minutes of input inactivity; settled 45 s, sampled 60 s. CPU time delta was below the timer resolution and is shown as 0.00%.
-
-<sub>v1.1.1 · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-09-26. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.1.2 (4) · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-09-29. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 For v1.1.2 (4), the figures above remain historical v1.1.1 measurements from 2026-09-26; this release has not been re-measured. This update adds an offscreen UI self-test and its close guard; the normal key engine, switching, event monitoring and UI layout are unchanged. The table's download size also belongs to v1.1.1; the website download button shows the current artifact size.

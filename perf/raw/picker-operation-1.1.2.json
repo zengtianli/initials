@@ -1,0 +1,18 @@
+{
+  "version": "1.1.2 (4)",
+  "samples_ms": [
+    150.7857920078095,
+    144.62583302520216,
+    150.25987499393523,
+    137.90104200597852,
+    150.32658298150636,
+    149.74695799173787,
+    144.07637499971315
+  ],
+  "median_ms": 149.7,
+  "runs": 7,
+  "binary_sha256": "3bc3d6bcaae03021f852c80cd2a1975baa7ecf83ab139cbfef02162775735260",
+  "method": "installed release --snapshot <png> --picker --right with isolated INITIALS_SUPPORT_DIR (copy of user config); production picker entries/fill/layout and Retina PNG export; 1 warmup + 7 runs; no event tap",
+  "load": "{ 3.93 5.25 6.56 }",
+  "measured_at": "2026-09-29"
+}

@@ -1,14 +1,16 @@
 {
   "product": "initials",
-  "version": "1.1.1",
-  "measured_at": "2026-09-26",
+  "version": "1.1.2 (4)",
+  "measured_at": "2026-09-29",
   "device": "Mac16,12 / Apple M4 / macOS 27.2",
   "size": {
-    "download_bytes": 1807939,
-    "installed_bytes": 2002944
+    "download_bytes": 1587274,
+    "download_mb": 1.51,
+    "installed_bytes": 2056192,
+    "installed_mb": 1.96
   },
   "compare": [],
-  "env_note": "2026-09-26 主会话逐个顺序测量，负载均值 36.39 25.92 31.08；total = 20480.00M  used = 18911.69M  free = 1568.31M（开始时）；启动时间受负载影响，内存与 CPU 为进程自身数值",
+  "env_note": "2026-09-29 主会话逐个顺序测量，负载均值 9.42 7.71 7.78；total = 5120.00M  used = 4199.31M  free = 920.69M（开始时）；启动时间受负载影响，内存与 CPU 为进程自身数值",
   "why": "纯 AppKit，零第三方依赖；按键由系统事件回调送达，回调里只做几次比较，切换动作放到回调外执行；配置改动由 kqueue 通知、不轮询，仅每 30 秒确认一次按键监听仍开着。",
   "why_en": "Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.",
   "history": [
@@ -57,24 +59,142 @@
           "raw": "perf/raw/picker-operation-1.1.1.json"
         }
       ]
-    }
-  ],
-  "speed_gui": [
+    },
     {
-      "key": "picker_offscreen_end_to_end",
-      "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
-      "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
-      "median_ms": 98.7,
-      "runs": 7,
-      "headline": true,
-      "method": "已安装发行版 --snapshot --picker --right；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
-      "raw": "perf/raw/picker-operation-1.1.1.json"
+      "section": "idle",
+      "replaced_on": "2026-09-29",
+      "reason": "本次按记录的采样窗口与辅助进程合计实测",
+      "value": {
+        "process": "Installed Initials 1.1.1 + helpers",
+        "footprint_mb": 13.0,
+        "main_footprint_mb": 13.0,
+        "cpu_pct": 0.0,
+        "main_cpu_pct": 0.0,
+        "processes": [
+          {
+            "pid": 31996,
+            "name": "main",
+            "cpu_pct": 0.0,
+            "footprint_peak_mb": 13.0
+          }
+        ],
+        "window_s": 60,
+        "scope": "主进程 + XPC 辅助进程 + 子进程合计",
+        "settle_s": 45,
+        "method": "installed signed release, background restart after >10 minutes HID idle; original keyboard config preserved; settle45s then helper-inclusive60s CPU window; footprint sampled after window",
+        "cpu_note": "安装版在输入设备闲置超过10分钟后后台切换；静置45秒后测60秒，CPU时间增量低于本次计时分辨率，显示0.00%。",
+        "cpu_note_en": "Installed build restarted in the background after over 10 minutes of input inactivity; settled 45 s, sampled 60 s. CPU time delta was below the timer resolution and is shown as 0.00%.",
+        "memory_note": "活动监视器同口径 phys_footprint，主进程与辅助进程合计13 MB；原配置与辅助功能权限保留。",
+        "memory_note_en": "13 MB phys_footprint for the main process and helpers; original configuration and Accessibility permission retained."
+      }
+    },
+    {
+      "section": "version",
+      "replaced_on": "2026-09-29",
+      "reason": "装机：安装了轻量化后的新构建",
+      "value": "1.1.1"
+    },
+    {
+      "section": "idle",
+      "version": "1.1.1",
+      "replaced_on": "2026-09-29",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "process": "/Applications/Initials.app/Contents/MacOS/Initials",
+        "footprint_mb": 16.0,
+        "main_footprint_mb": 16.0,
+        "cpu_pct": 0.02,
+        "main_cpu_pct": 0.02,
+        "processes": [
+          {
+            "name": "main",
+            "cpu_pct": 0.016,
+            "footprint_peak_mb": 16.0
+          }
+        ],
+        "window_s": 60,
+        "settle_s": null,
+        "measured_at": "2026-09-29",
+        "method": "对已长时间运行的实例直接 measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟",
+        "load": "负载均值 6.39 6.28 7.32；total = 5120.00M  used = 4199.31M  free = 920.69M"
+      }
+    },
+    {
+      "section": "speed_gui",
+      "version": "1.1.1",
+      "replaced_on": "2026-09-29",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": [
+        {
+          "key": "picker_offscreen_end_to_end",
+          "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+          "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+          "median_ms": 98.7,
+          "runs": 7,
+          "headline": true,
+          "method": "已安装发行版 --snapshot --picker --right；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
+          "raw": "perf/raw/picker-operation-1.1.1.json"
+        }
+      ]
+    },
+    {
+      "section": "size",
+      "version": "1.1.1",
+      "replaced_on": "2026-09-29",
+      "reason": "版本变化；旧安装包大小不沿用",
+      "value": {
+        "download_bytes": 1807939,
+        "installed_bytes": 2002944
+      }
+    },
+    {
+      "section": "measured_artifact",
+      "replaced_on": "2026-09-29",
+      "reason": "1.1.2 (4) 已实测",
+      "value": {
+        "version": "1.1.1",
+        "build": "3",
+        "executable_sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b"
+      }
+    },
+    {
+      "section": "reused_for",
+      "replaced_on": "2026-09-29",
+      "reason": "1.1.2 (4) 已实测，不再沿用 1.1.1 历史数字",
+      "value": {
+        "1.1.2 (4)": {
+          "reviewed_at": "2026-09-28",
+          "reason": "新增离屏界面自检及其关闭守卫，正常运行的按键引擎、切换、监听和界面布局未变；沿用原测量日期、设备和构建哈希，仅供历史参考，1.1.2 尚未重新测量。",
+          "reason_en": "Only an offscreen UI self-test and its close guard were added; the normal key engine, switching, event monitoring and UI layout are unchanged. Original measurement date, device and build hash are retained for historical reference; 1.1.2 has not been re-measured.",
+          "reviewed_sources_sha256": {
+            "Sources/App/AppDelegate.swift": "edfca96b184dead74ecb16deab26e59f94a472b973fc5fd0b3b8835b11c836dd",
+            "Sources/App/EventTap.swift": "84db9e4095e0b7291844873af27738b41d6a3f473508c45fb24801bf5715c02b",
+            "Sources/App/Launcher.swift": "8f7616f86d95298c8dc93d8fc945fbfb3863ab462666947eed3eb40332fd0112",
+            "Sources/App/PickerPanel.swift": "a2fe916110a0fee3d3d473c5e2f885f0119dca0d542292cf1622ecb1da69a10b",
+            "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
+            "Sources/App/SettingsWindowController.swift": "3ca1deeda83f5243e740c57086b7233c80245394f5b9067069e562ee26e26f70",
+            "Sources/App/Snapshot.swift": "8b091ec2a490895397fc79e31705b87abd1e6ecfaa13983498eff510a2a9c721",
+            "Sources/App/UISelfTest.swift": "a701dc674bbdb50394095b873a2895916c6e7df8b2a645f3a7f52572446a3dc1",
+            "Sources/App/main.swift": "cc73f0e0c55a18b8fe094e4e1df9e170b78983dea39ca35c31614b62464cff45",
+            "Sources/CLI/main.swift": "998efe64b4862b4abf4f7e9bbbb4eaac0e01985f43e96cfdcd50dfbda3177677",
+            "Sources/Shared/AppCatalog.swift": "e34bba3f25237a6c82f1fa6980b9520fa1aa3a3e493e20ac96b4df8f4d0b1e84",
+            "Sources/Shared/Config.swift": "6bca80ddf1401f4345f598aeb2e33d7851dd821aa2ab6223cb93f07cf60ec7c9",
+            "Sources/Shared/Decision.swift": "9a6ad13996a402d5c40021e7a3606890ed3e93a115f24f98d14d6cdf2d19c2a4",
+            "Sources/Shared/Hammerspoon.swift": "98bb958b489a4231f509b6985e7d0babd666ecfc37c79504729fd9db27fe617e",
+            "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
+            "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+          },
+          "display": "historical_only",
+          "measured_version": "1.1.1",
+          "measured_executable_sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b"
+        }
+      }
     }
   ],
   "measured_artifact": {
-    "version": "1.1.1",
-    "build": "3",
-    "executable_sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b"
+    "version": "1.1.2",
+    "build": "4",
+    "executable_sha256": "3bc3d6bcaae03021f852c80cd2a1975baa7ecf83ab139cbfef02162775735260"
   },
   "measurement_history": [
     {
@@ -85,54 +205,35 @@
     }
   ],
   "idle": {
-    "process": "Installed Initials 1.1.1 + helpers",
-    "footprint_mb": 13.0,
-    "main_footprint_mb": 13.0,
+    "process": "/Applications/Initials.app",
+    "footprint_mb": 16.0,
+    "main_footprint_mb": 16.0,
     "cpu_pct": 0.0,
     "main_cpu_pct": 0.0,
     "processes": [
       {
-        "pid": 31996,
         "name": "main",
         "cpu_pct": 0.0,
-        "footprint_peak_mb": 13.0
+        "footprint_peak_mb": 16.0
       }
     ],
     "window_s": 60,
-    "scope": "主进程 + XPC 辅助进程 + 子进程合计",
-    "settle_s": 45,
-    "method": "installed signed release, background restart after >10 minutes HID idle; original keyboard config preserved; settle45s then helper-inclusive60s CPU window; footprint sampled after window",
-    "cpu_note": "安装版在输入设备闲置超过10分钟后后台切换；静置45秒后测60秒，CPU时间增量低于本次计时分辨率，显示0.00%。",
-    "cpu_note_en": "Installed build restarted in the background after over 10 minutes of input inactivity; settled 45 s, sampled 60 s. CPU time delta was below the timer resolution and is shown as 0.00%.",
-    "memory_note": "活动监视器同口径 phys_footprint，主进程与辅助进程合计13 MB；原配置与辅助功能权限保留。",
-    "memory_note_en": "13 MB phys_footprint for the main process and helpers; original configuration and Accessibility permission retained."
+    "settle_s": null,
+    "measured_at": "2026-09-29",
+    "method": "对已长时间运行的实例直接 measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟",
+    "load": "负载均值 8.47 7.83 7.82；total = 5120.00M  used = 4199.31M  free = 920.69M"
   },
-  "reused_for": {
-    "1.1.2 (4)": {
-      "reviewed_at": "2026-09-28",
-      "reason": "新增离屏界面自检及其关闭守卫，正常运行的按键引擎、切换、监听和界面布局未变；沿用原测量日期、设备和构建哈希，仅供历史参考，1.1.2 尚未重新测量。",
-      "reason_en": "Only an offscreen UI self-test and its close guard were added; the normal key engine, switching, event monitoring and UI layout are unchanged. Original measurement date, device and build hash are retained for historical reference; 1.1.2 has not been re-measured.",
-      "reviewed_sources_sha256": {
-        "Sources/App/AppDelegate.swift": "edfca96b184dead74ecb16deab26e59f94a472b973fc5fd0b3b8835b11c836dd",
-        "Sources/App/EventTap.swift": "84db9e4095e0b7291844873af27738b41d6a3f473508c45fb24801bf5715c02b",
-        "Sources/App/Launcher.swift": "8f7616f86d95298c8dc93d8fc945fbfb3863ab462666947eed3eb40332fd0112",
-        "Sources/App/PickerPanel.swift": "a2fe916110a0fee3d3d473c5e2f885f0119dca0d542292cf1622ecb1da69a10b",
-        "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
-        "Sources/App/SettingsWindowController.swift": "3ca1deeda83f5243e740c57086b7233c80245394f5b9067069e562ee26e26f70",
-        "Sources/App/Snapshot.swift": "8b091ec2a490895397fc79e31705b87abd1e6ecfaa13983498eff510a2a9c721",
-        "Sources/App/UISelfTest.swift": "a701dc674bbdb50394095b873a2895916c6e7df8b2a645f3a7f52572446a3dc1",
-        "Sources/App/main.swift": "cc73f0e0c55a18b8fe094e4e1df9e170b78983dea39ca35c31614b62464cff45",
-        "Sources/CLI/main.swift": "998efe64b4862b4abf4f7e9bbbb4eaac0e01985f43e96cfdcd50dfbda3177677",
-        "Sources/Shared/AppCatalog.swift": "e34bba3f25237a6c82f1fa6980b9520fa1aa3a3e493e20ac96b4df8f4d0b1e84",
-        "Sources/Shared/Config.swift": "6bca80ddf1401f4345f598aeb2e33d7851dd821aa2ab6223cb93f07cf60ec7c9",
-        "Sources/Shared/Decision.swift": "9a6ad13996a402d5c40021e7a3606890ed3e93a115f24f98d14d6cdf2d19c2a4",
-        "Sources/Shared/Hammerspoon.swift": "98bb958b489a4231f509b6985e7d0babd666ecfc37c79504729fd9db27fe617e",
-        "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
-        "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
-      },
-      "display": "historical_only",
-      "measured_version": "1.1.1",
-      "measured_executable_sha256": "3d682ac3f8d43625399fdfbee8f4c4b9a8670e88ff0fe4127c25d9a8b1d1bd4b"
+  "speed_gui": [
+    {
+      "key": "picker_offscreen_end_to_end",
+      "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+      "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+      "median_ms": 149.7,
+      "runs": 7,
+      "headline": true,
+      "method": "已安装发行版 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。同条件交替对照 1.1.1 原二进制 150.5/147.1 ms、1.1.2 为 141.9/149.7 ms，两版无差异；与 1.1.1 旧记录 98.7 ms 的差别来自测量环境。",
+      "raw": "perf/raw/picker-operation-1.1.2.json",
+      "load": "{ 3.93 5.25 6.56 }"
     }
-  }
+  ]
 }
