@@ -12,7 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var pickerTimer: Timer?
     private var trustTimer: Timer?
     private var watcher: DispatchSourceFileSystemObject?
-    private var paused = false
+    private let pauseControl = PauseControl()
+    private var paused: Bool { pauseControl.paused }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let args = CommandLine.arguments
@@ -25,6 +26,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         buildStatusItem()
         watchConfig()
         tap.onOutput = { [weak self] in self?.handle($0) }
+        tap.onWatchdog = { [weak self] in
+            guard let self, self.writeStatus(onlyIfChanged: true) else { return }
+            self.updateStatusIcon()
+        }
+        pauseControl.onChange = { [weak self] in
+            self?.applyConfig()
+            self?.writeStatus()
+        }
+        pauseControl.listen()
         startTap()
         let firstRun = !FileManager.default.fileExists(atPath: Paths.config.path)
         if !args.contains("--background") && (firstRun || !EventTap.trusted || configError != nil) {
@@ -39,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         tap.stop()
-        try? FileManager.default.removeItem(at: Paths.status)
+        RuntimeStatus.remove(ifOwnedBy: ProcessInfo.processInfo.processIdentifier)
     }
 
     // MARK: Config
@@ -121,7 +131,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func showPicker(_ side: Side) {
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }
-        picker.show(PickerPanel.entries(config: config, side: side, running: Launcher.runningApps()), on: screen)
+        picker.show(PickerPanel.entries(config: config, side: side, running: RunningApp.current()), on: screen)
         pickerTimer?.invalidate()
         pickerTimer = Timer.scheduledTimer(withTimeInterval: config.pickerTimeoutSeconds, repeats: false) { [weak self] _ in
             self?.closePicker()
@@ -135,12 +145,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         picker.orderOut(nil)
     }
 
-    private func writeStatus() {
-        let status = RuntimeStatus(pid: ProcessInfo.processInfo.processIdentifier, accessibilityTrusted: EventTap.trusted,
-                                   tapEnabled: tap.isEnabled, version: appVersion, updated: Date())
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try? encoder.encode(status).write(to: Paths.status, options: .atomic)
+    /// Launch, Accessibility granted and pause/resume always write (a pause request is confirmed even
+    /// when it changes nothing). The tap watchdog passes `onlyIfChanged`, so a revoked permission or a
+    /// dead tap reaches `initials status` within 30 s without a timer or a write of its own each time:
+    /// the folder watcher sees every write. Returns whether it wrote.
+    @discardableResult
+    private func writeStatus(onlyIfChanged: Bool = false) -> Bool {
+        RuntimeStatus(pid: ProcessInfo.processInfo.processIdentifier, accessibilityTrusted: EventTap.trusted,
+                      tapEnabled: tap.isEnabled, paused: paused, version: appVersion, updated: Date())
+            .publish(onlyIfChanged: onlyIfChanged)
     }
 
     // MARK: Menu bar
@@ -155,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateStatusIcon() {
-        let active = tap.isEnabled && !paused && (config.right.enabled || config.left.enabled)
+        let active = config.isActive(tapEnabled: tap.isEnabled, paused: paused)
         let image = NSImage(systemSymbolName: active ? "command" : "command.circle", accessibilityDescription: "Initials")
         image?.isTemplate = true
         statusItem?.button?.image = image
@@ -181,8 +194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func togglePause() {
-        paused.toggle()
-        applyConfig()
+        pauseControl.set(!paused)
     }
 
     @objc func showSettings(_ sender: Any?) {

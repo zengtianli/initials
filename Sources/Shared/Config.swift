@@ -96,19 +96,78 @@ struct Config: Codable, Equatable {
                        pinned: Trigger.mask(bindings(for: side).keys))
     }
 
+    /// The menu-bar icon's "working" state and `initials status`'s `active`: the tap is on, not
+    /// paused, and at least one ⌘ key is enabled.
+    func isActive(tapEnabled: Bool, paused: Bool) -> Bool {
+        tapEnabled && !paused && (right.enabled || left.enabled)
+    }
+
     /// Pinned letters that holding left ⌘ would take away from common shortcuts.
-    func leftHoldConflicts() -> [(letter: String, shortcut: String)] {
+    func leftHoldConflicts() -> [Shortcut] {
         guard left.enabled && left.hold else { return [] }
         let pinned = bindings(for: .left)
         return Self.commonShortcuts.filter { pinned[$0.letter] != nil }
     }
 
-    static let commonShortcuts: [(letter: String, shortcut: String)] = [
-        ("a", T("全选", "Select All")), ("c", T("拷贝", "Copy")), ("f", T("查找", "Find")), ("h", T("隐藏", "Hide")),
-        ("m", T("最小化", "Minimize")), ("n", T("新建", "New")), ("o", T("打开", "Open")), ("p", T("打印", "Print")),
-        ("q", T("退出", "Quit")), ("r", T("刷新", "Reload")), ("s", T("保存", "Save")), ("t", T("新标签页", "New Tab")),
-        ("v", T("粘贴", "Paste")), ("w", T("关闭窗口", "Close")), ("x", T("剪切", "Cut")), ("z", T("撤销", "Undo")),
-    ]
+    /// `id` is the stable, locale-independent name (`initials list --json`); `name` is for people.
+    struct Shortcut: Equatable {
+        var letter: String, id: String, zh: String, en: String
+        var name: String { T(zh, en) }
+    }
+
+    static let commonShortcuts: [Shortcut] = [
+        ("a", "select-all", "全选", "Select All"), ("c", "copy", "拷贝", "Copy"), ("f", "find", "查找", "Find"),
+        ("h", "hide", "隐藏", "Hide"), ("m", "minimize", "最小化", "Minimize"), ("n", "new", "新建", "New"),
+        ("o", "open", "打开", "Open"), ("p", "print", "打印", "Print"), ("q", "quit", "退出", "Quit"),
+        ("r", "reload", "刷新", "Reload"), ("s", "save", "保存", "Save"), ("t", "new-tab", "新标签页", "New Tab"),
+        ("v", "paste", "粘贴", "Paste"), ("w", "close", "关闭窗口", "Close"), ("x", "cut", "剪切", "Cut"),
+        ("z", "undo", "撤销", "Undo"),
+    ].map { Shortcut(letter: $0.0, id: $0.1, zh: $0.2, en: $0.3) }
+
+    // MARK: Edits shared by Settings and `initials`
+
+    /// Left ⌘ that borrows the right ⌘ letters has no table of its own to edit; Settings greys it out.
+    func bindingsEditable(_ side: Side) -> Bool { !(side == .left && left.useRightBindings) }
+
+    /// The trigger checkboxes show `enabled && trigger`, so switching one also re-enables a disabled side.
+    mutating func setTrigger(_ side: Side, _ change: (inout SideConfig) -> Void) {
+        update(side) { s in
+            if !s.enabled { s.hold = false; s.doubleTap = false; s.enabled = true }
+            change(&s)
+        }
+    }
+
+    /// Pins `binding` to `letter`; `movingFrom` clears the letter it came from (Settings' change-app sheet).
+    /// Returns the different app that `letter` held before, if any.
+    @discardableResult
+    mutating func pin(_ binding: Binding, to letter: String, on side: Side, movingFrom existing: String? = nil) throws -> Binding? {
+        guard bindingsEditable(side) else { throw ConfigEditError.leftShared }
+        var replaced: Binding?
+        update(side) { s in
+            if let existing, existing != letter { s.bindings[existing] = nil }
+            replaced = s.bindings[letter]
+            s.bindings[letter] = binding
+        }
+        return replaced == binding ? nil : replaced
+    }
+
+    /// Removes a letter; returns what it held (nil when it was not pinned).
+    @discardableResult
+    mutating func unpin(_ letter: String, on side: Side) throws -> Binding? {
+        guard bindingsEditable(side) else { throw ConfigEditError.leftShared }
+        var removed: Binding?
+        update(side) { s in removed = s.bindings.removeValue(forKey: letter) }
+        return removed
+    }
+
+    /// Hammerspoon import: imported letters win. Returns the letters whose app changed.
+    @discardableResult
+    mutating func merge(_ imported: [String: Binding], into side: Side) throws -> [String] {
+        guard bindingsEditable(side) else { throw ConfigEditError.leftShared }
+        let before = self.side(side).bindings
+        update(side) { s in s.bindings.merge(imported) { _, new in new } }
+        return imported.keys.filter { before[$0] != nil && before[$0] != imported[$0] }.sorted()
+    }
 
     static func normalizedLetter(_ raw: String) -> String? {
         let s = raw.trimmingCharacters(in: .whitespaces).lowercased()
@@ -173,13 +232,96 @@ enum MacKitKeys {
     }
 }
 
-/// Written by the app so the CLI can report whether interception is live.
-struct RuntimeStatus: Codable {
+enum ConfigEditError: LocalizedError, Equatable {
+    case leftShared
+    var errorDescription: String? {
+        T("左 ⌘ 正在使用右 ⌘ 的字母；先关掉“使用与右 ⌘ 相同的字母”。", "Left ⌘ uses the right ⌘ letters; turn off shared letters first.")
+    }
+}
+
+/// Written by the app at launch, when Accessibility is granted and on every pause/resume; the tap's
+/// existing 30 s watchdog rewrites it only when what it reports stopped being true (trust revoked,
+/// tap disabled, file gone). No timer of its own, so the CLI can report whether interception is live.
+struct RuntimeStatus: Codable, Equatable {
     var pid: Int32
     var accessibilityTrusted: Bool
     var tapEnabled: Bool
+    /// Menu-bar Pause / `initials pause`: runtime only. Absent in files from 1.1.2 and earlier.
+    var paused: Bool?
     var version: String
     var updated: Date
+
+    static func read(from url: URL = Paths.status) -> RuntimeStatus? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(RuntimeStatus.self, from: data)
+    }
+
+    func write(to url: URL = Paths.status) {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys]
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? encoder.encode(self).write(to: url, options: .atomic)
+    }
+
+    /// Writes the file unless `onlyIfChanged` and it already reports this state (the watchdog's pass).
+    /// Returns whether it wrote.
+    @discardableResult
+    func publish(onlyIfChanged: Bool = false, to url: URL = Paths.status) -> Bool {
+        if onlyIfChanged, sameState(as: Self.read(from: url)) { return false }
+        write(to: url)
+        return true
+    }
+
+    /// Quitting removes the file only when it is ours, so a stray second copy cannot erase the running app's state.
+    static func remove(ifOwnedBy pid: Int32, at url: URL = Paths.status) {
+        guard read(from: url)?.pid == pid else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Same reported state, whenever it was written: the watchdog rewrites the file only when this is false.
+    func sameState(as other: RuntimeStatus?) -> Bool {
+        guard var other else { return false }
+        other.updated = updated
+        return other == self
+    }
+
+    /// The pid is alive and is an Initials app binary (a reused pid from a crash is not).
+    var isLive: Bool { Self.isInitialsProcess(pid) }
+
+    /// The copy serving this support folder, if one is running. `initials status|pause|resume` talk to
+    /// it, and a second app copy refuses to start while it exists. Scoped to the folder, so isolated
+    /// self-tests (their own `INITIALS_SUPPORT_DIR`) and `--snapshot` renders (no status file) never
+    /// stop the real app from starting.
+    static func live(at url: URL = Paths.status) -> RuntimeStatus? {
+        guard let status = read(from: url), status.isLive else { return nil }
+        return status
+    }
+
+    static func isInitialsProcess(_ pid: Int32) -> Bool {
+        guard pid > 0 else { return false }
+        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return false }
+        return String(cString: buffer).hasSuffix(".app/Contents/MacOS/Initials")
+    }
+}
+
+/// `initials pause|resume` → the running app. Posts carry the support folder as their object,
+/// so an isolated run (`INITIALS_SUPPORT_DIR`) never reaches the installed app.
+enum RuntimeControl {
+    static let pause = Notification.Name("cyou.tianli.initials.pause")
+    static let resume = Notification.Name("cyou.tianli.initials.resume")
+    /// The folder's real path. The app creates the folder before listening and the CLI only posts
+    /// after reading status.json from it, so both ends resolve an existing folder the same way
+    /// (`standardizedFileURL` would drop /private only once the folder exists).
+    static var scope: String {
+        let path = Paths.supportDirectory.path
+        guard let resolved = realpath(path, nil) else { return path }
+        defer { free(resolved) }
+        return String(cString: resolved)
+    }
 }
 
 enum Lang {

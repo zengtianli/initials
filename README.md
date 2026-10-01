@@ -4,7 +4,7 @@
 
 [官网、下载与安装教程](https://initials.tianli.cyou/) · [English website](https://initials.tianli.cyou/en/)
 
-按住 **⌘** 再按字母，瞬间切到、打开或隐藏对应的 app；快速**双击 ⌘**，弹出字母面板，再按字母切换。左右两个 ⌘ 各自可设，可以同时用。原生 macOS（Swift + AppKit），常驻菜单栏，附带同源 `initials` 命令行；实测占用见[资源占用](#资源占用)。
+按住 **⌘** 再按字母，瞬间切到、打开或隐藏对应的 app；快速**双击 ⌘**，弹出字母面板，再按字母切换。左右两个 ⌘ 各自可设，可以同时用。原生 macOS（Swift + AppKit），常驻菜单栏，附带同源 `initials` 命令行（给脚本和 agent 用）；实测占用见[资源占用](#资源占用)。
 
 ![左右 ⌘ 都可设置：按住 + 字母直达，双击弹出字母面板](site/assets/scene-keys-zh.png)
 
@@ -20,8 +20,6 @@
 <sub>v1.1.2 (4) · Mac16,12 / Apple M4 / macOS 27.2 · 2026-09-29。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
 <!-- lightweight:end -->
 
-当前 v1.1.2（4）沿用上方 v1.1.1 在 2026-09-26 的历史实测作为参考，尚未重新测量。此轮新增离屏界面自检及其关闭守卫，正常运行的按键引擎、切换、监听和界面布局未变；表中安装包体积同样属于 v1.1.1，当前下载大小以官网按钮为准。
-
 ## 用法
 
 左右两个 ⌘ 各有两个开关，可以只开一个，也可以都开。默认：右 ⌘ 按住，左 ⌘ 双击。
@@ -33,7 +31,7 @@
   - 同时按 ⇧⌥⌃ 的组合照常放行；两个 ⌘ 同时按住时以右 ⌘ 为准。
 - **双击 ⌘，再按字母**：屏幕中间弹出这一边的字母面板，不抢当前窗口焦点；Esc 或 4 秒不按键自动关闭。两下之间按了别的键、点了鼠标、按住太久或左右各按一下都不算双击。
 - 左右各有一张字母表；默认左边沿用右边的表，可以在设置里分开。
-- **设置**（菜单栏 ⌘ 图标 → 设置）：⌘1/⌘2 切换右 ⌘ / 左 ⌘，⌘N 添加，⌫ 移除，↩ 换 app，⌘W 关闭。可一键“从 Hammerspoon 导入”已有的 rcmd 映射，确认可用后一键“关闭 Hammerspoon rcmd”。
+- **设置**（菜单栏 ⌘ 图标 → 设置）：⌘1/⌘2 切换右 ⌘ / 左 ⌘，⌘N 添加，⌫ 移除，↩ 换 app，⌘W 关闭。可一键“从 Hammerspoon 导入”已有的 right_command 映射；旧版 MacKit 仍带 rcmd 模块时，设置窗还会提供“关闭 Hammerspoon rcmd”。
 
 ## 安装
 
@@ -43,22 +41,56 @@
 2. 在设置窗口点“打开辅助功能设置…”，在“系统设置 › 隐私与安全性 › 辅助功能”里打开 Initials。顶部显示“✓ 已授权辅助功能，正在工作”即可，不用重启。Initials 只看 ⌘ 和紧跟的字母，不记录、不保存输入。
 3. 点“添加…”给字母指定 app，或“从 Hammerspoon 导入”。
 
-## 命令行
+## 命令行（给脚本与 agent）
+
+图形界面给人用，`initials` 给脚本和 agent 用。两者调用同一套 `Sources/Shared` 业务代码、改同一份配置，校验规则一致（例如左 ⌘ 沿用右 ⌘ 字母时不能编辑左边的表），运行中的 app 立即生效。命令装在 `Initials.app/Contents/Resources/bin/initials`，`scripts/install.sh` 链到 `~/.local/bin/initials`。
+
+- 每个命令都有 `initials <命令> --help`：只打印说明，不执行任何动作。
+- 每个命令都支持 `--json`：输出一个带 `"ok"` 的对象；失败时 `"ok": false`、带 `error`，退出码非 0。帮助加 `--json` 也是一个对象（`{"ok": true, "command", "help"}`）。
+- 改配置的命令都支持 `--dry-run`：输出改后的结果，不保存；结果与原配置相同时不重写文件。
+- 未知参数一律以退出码 2 拒绝，不会被忽略后误执行。
 
 ```bash
-initials list                      # 两边的字母表
-initials set m Music               # 名字、bundle id 或 /路径/To.app
+# 读取（不写任何文件）
+initials list [--side right|left] [--json]   # 两边的触发方式、选项、快捷键冲突、字母表（含 app 是否找得到、实际位置）
+initials preview [字母…] [--side right|left] [--json]  # 每个字母此刻会做什么（打开/切换/隐藏/无），只报告不执行
+initials status [--json]         # 是否运行、辅助功能授权、是否拦截、是否暂停、是否生效
+initials login [--json]          # 是否“登录时打开”（只读）
+initials path [--json]           # 配置与状态文件位置
+initials version [--json]        # 所在 Initials.app 的版本
+
+# 修改配置（都可加 --dry-run、--json）
+initials set m Music             # 名字、bundle id 或 /路径/To.app
 initials set w WeChat --side left  # 左边单独设（先 initials share off）
 initials unset m
-initials import [--from keymaps.lua]
-initials hold on|off [--side right|left]  # 按住该 ⌘ + 字母
-initials tap on|off [--side right|left]   # 双击该 ⌘ 弹面板
-initials enable|disable [right|left|all]
-initials status [--json]           # 运行、授权、拦截状态
-initials hammerspoon rcmd on|off   # 切换 MacKit 的 Hammerspoon rcmd
+initials move m k                # 把 M 的 app 移到 K（覆盖 K 原有的 app，并在结果里注明）
+initials import [--from keymaps.lua]  # 导入 Hammerspoon right_command，没装的 app 跳过并列出
+initials hold on|off [--side right|left]        # 按住该 ⌘ + 字母
+initials tap on|off [--side right|left]         # 双击该 ⌘ 弹面板
+initials cycle on|off [--side right|left]       # 没指定的字母在名字以它开头的运行中 app 之间轮换
+initials hide-front on|off [--side right|left]  # 该 app 已在最前时再按就隐藏
+initials share on|off            # 左 ⌘ 沿用右 ⌘ 的字母（左边自己的表会保留）
+initials enable|disable [right|left|all]  # 写进配置，重启后仍有效
+
+# 运行中的 app 与外部模块（可加 --json；不改 Initials 配置，不接受 --dry-run）
+initials pause | resume          # 同菜单栏“暂停/恢复”，只在本次运行有效；先用 status 看当前状态
+initials hammerspoon rcmd on|off # 只在旧版 MacKit 仍带 rcmd 模块时可用
 ```
 
-退出码：0 成功，1 没找到，2 用法错误，3 Initials 没在运行（status）。配置在 `~/Library/Application Support/cyou.tianli.initials/config.json`，app 会监视文件，改动即时生效。装有 [MacKit](https://github.com/zengtianli/mackit) 时，当前字母会写入 `~/.config/mackit/keys.d/initials.json`，`mackit keys` / `mackit doctor` 可查到并检查冲突。
+给 agent 的典型用法：
+
+```bash
+initials list --json | jq '.right.bindings | map_values(.found)'   # 哪些字母的 app 找不到
+initials set m Music --dry-run --json                               # 先看改动，再去掉 --dry-run 执行
+initials preview m s --json | jq '.letters[] | {letter, action, target}'
+initials pause --json && initials status --json | jq '{paused, intercepting, active}'
+```
+
+退出码：0 成功；1 没找到（字母、app、导入文件不存在或其中没有 right_command 字母、rcmd 模块）；2 用法错误或无法读写（含左 ⌘ 沿用右 ⌘ 字母时编辑左边）；3 Initials 没在运行（status、pause、resume）；4 运行中的 app 没有确认（pause、resume，早于该功能的 app 版本会这样）。`status` 读取 app 写的 `status.json` 并核对进程确实是 Initials：启动、授予辅助功能、暂停/恢复时立即写入；辅助功能被撤销或拦截失效，由已有的 30 秒看门狗发现后改写（只在状态变了时写，不另设定时器），所以这类变化最多晚 30 秒。
+
+覆盖范围：设置窗里的全部开关、字母表的添加、更换、移动、移除与导入，菜单栏的暂停/恢复和状态，字母面板的内容（`preview`）都有对应命令。只留在图形界面：选 app 的对话框和图标、⌘1/⌘2 等窗口操作、申请辅助功能授权（只能由 app 自己请求，并由用户在系统设置里打开）、切换“登录时打开”（macOS 要求 app 自己注册，CLI 只读）、退出 app。按键切换本身也不做成命令：真的切换会抢走当前焦点；想知道字母会做什么用 `preview`，要切到某个 app 用 `open -a`。
+
+配置在 `~/Library/Application Support/cyou.tianli.initials/config.json`，app 会监视文件，改动即时生效；`INITIALS_SUPPORT_DIR=<目录>` 让 app 和 CLI 都改用该目录，测试时不碰真实配置。装有 [MacKit](https://github.com/zengtianli/mackit) 时，当前字母会写入 `~/.config/mackit/keys.d/initials.json`，`mackit keys` / `mackit doctor` 可查到并检查冲突。
 
 ## 实测
 
@@ -68,13 +100,14 @@ initials hammerspoon rcmd on|off   # 切换 MacKit 的 Hammerspoon rcmd
 
 ```bash
 bash build.sh               # 先跑单元测试，再编译 app 与 CLI、签名 → build/Initials.app
+INITIALS_BUILD_DIR=build/dev CODESIGN_IDENTITY=- bash build.sh  # 自用开发构建，不动发布用的 build/Initials.app
 bash scripts/install.sh     # 退出 Initials 后安装到 /Applications，CLI 链到 ~/.local/bin
 python3 scripts/release.py  # 公证 app 与 DMG 并装订，写 build/release.json
 python3 scripts/shots.py    # 从构建出的 app 重新生成 site/assets 截图与场景图
 python3 scripts/build-site.py  # 用 release.json 生成 build/site（主页 + 下载）
 ```
 
-界面验证不抢焦点：`Initials --snapshot out.png --settings right|left [--dark]`、`--snapshot out.png --picker [--right]` 离屏渲染；`Initials --simulate right:m,left:s` 只打印每个字母此刻会做什么，不执行。测试隔离用 `INITIALS_SUPPORT_DIR=<目录>`。
+界面验证不抢焦点：`Initials --snapshot out.png --settings right|left [--dark]`、`--snapshot out.png --picker [--right]` 离屏渲染；`Initials --simulate right:m,left:s` 只打印每个字母此刻会做什么，不执行。`Initials --help` 列出 app 本体的全部参数，不认识的参数直接退出；同一个配置目录已有一份 Initials 在运行（以该目录的 `status.json` 为准）时，第二份不会启动；隔离目录里的自测进程和 `--snapshot` 渲染不会挡住正式 app 启动。测试隔离用 `INITIALS_SUPPORT_DIR=<目录>`；`scripts/accept/*.py` 用隔离目录验收 CLI、暂停通道（`--control-self-test`）和离屏界面。
 
 ## 许可
 

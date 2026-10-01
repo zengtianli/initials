@@ -30,8 +30,11 @@ def performance_reuse(raw, release):
     sources = sorted(ROOT.glob("Sources/**/*.swift")) + sorted(ROOT.glob("Resources/*"))
     actual = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
               for p in sources if p.is_file()}
+    # raw["version"] is "1.1.2 (4)" since measurements carry the build; measured_artifact splits it.
+    short, _, build = raw["version"].partition(" ")
     valid = (reuse.get("display") == "historical_only"
-             and reuse.get("measured_version") == raw["version"] == artifact.get("version")
+             and reuse.get("measured_version") == raw["version"]
+             and short == artifact.get("version") and build.strip("()") in ("", str(artifact.get("build")))
              and reuse.get("measured_executable_sha256") == artifact.get("executable_sha256")
              and re.fullmatch(r"[0-9a-f]{64}", str(artifact.get("executable_sha256", "")))
              and reuse.get("reviewed_at") and reuse.get("reason") and reuse.get("reason_en")
@@ -185,6 +188,16 @@ def main():
             f'<url><loc>{url}</loc>{alternates}</url>\n' for url in (f"{ORIGIN}/", f"{ORIGIN}/en/"))
         + '</urlset>\n')
     (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {ORIGIN}/sitemap.xml\n")
+    # Portal/Chapter read this product's published numbers from facts.json, deployed with the page.
+    import product_facts
+    facts = product_facts.from_repo(ROOT, product_id="initials-mac", icon="assets/icon.png")
+    if facts["version"] != release["version"]:
+        raise SystemExit(f"facts.json version {facts['version']} (project.yaml sop.release) != release {release['version']}")
+    if reuse:
+        # The fixed schema has no field for it: version is the release, numbers are v{measured}'s.
+        print(f"warning: facts.json v{release['version']} carries historical v{raw_perf['version']} measurements "
+              f"(reviewed reuse); measured_at={facts['measured_at']}", file=sys.stderr)
+    product_facts.write(out, facts)
     print(f"Built {out}: Chinese + English, v{release['version']}, {dmg.name}")
 
 

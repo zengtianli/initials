@@ -58,25 +58,13 @@ final class PickerPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
+    /// The shared `LetterPreview` rows (also `initials preview`), plus icons.
     static func entries(config: Config, side: Side, running: [RunningApp]) -> [Entry] {
-        let bindings = config.bindings(for: side)
-        let options = config.side(side)
-        var result: [Entry] = []
-        for scalar in UnicodeScalar("a").value...UnicodeScalar("z").value {
-            let letter = String(UnicodeScalar(scalar)!)
-            if let b = bindings[letter] {
-                let icon = AppCatalog.url(for: b).map { NSWorkspace.shared.icon(forFile: $0.path) }
-                result.append(Entry(letter: letter, title: b.name, icon: icon, pinned: true))
-            } else if options.cycleUnbound {
-                let apps = running.filter { $0.name.lowercased().hasPrefix(letter) }
-                    .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-                guard let first = apps.first else { continue }
-                let icon = first.path.map { NSWorkspace.shared.icon(forFile: $0) }
-                let title = apps.count == 1 ? first.name : "\(first.name) +\(apps.count - 1)"
-                result.append(Entry(letter: letter, title: title, icon: icon, pinned: false))
-            }
+        LetterPreview.rows(config: config, side: side, running: running).map { row in
+            let path = row.binding.map { AppCatalog.url(for: $0)?.path } ?? row.candidates.first?.path
+            return Entry(letter: row.letter, title: row.title, icon: path.map { NSWorkspace.shared.icon(forFile: $0) },
+                         pinned: row.pinned)
         }
-        return result
     }
 
     func show(_ entries: [Entry], on screen: NSScreen?) {

@@ -51,18 +51,25 @@ def main():
 
         before_reads = files()
         listing = json.loads(invoke("list", "--json").stdout)
-        assert set(listing) == {"right", "left"}
-        for side in listing.values():
-            assert set(side) == side_fields
-            assert side["bindings"] == saved["right"]["bindings"]
+        assert set(listing) == {"ok", "config", "doubleTapSeconds", "pickerTimeoutSeconds", "right", "left"}
+        derived = {"effectiveHold", "effectiveDoubleTap", "editable", "conflicts"}
+        for side in ("right", "left"):
+            assert set(listing[side]) == side_fields | derived
+            shown = {k: {f: b[f] for f in ("name", "bundleID", "path")} for k, b in listing[side]["bindings"].items()}
+            assert shown == saved["right"]["bindings"]
+            assert all(set(b) == {"name", "bundleID", "path", "found", "resolvedPath"} for b in listing[side]["bindings"].values())
         diagnostic = json.loads(invoke("status", "--json", expected=3).stdout)
-        assert set(diagnostic) == {"running", "accessibilityTrusted", "intercepting", "version", "hammerspoonRcmd", "config"}
-        assert diagnostic["running"] is False and diagnostic["intercepting"] is False
-        assert diagnostic["version"] is None and diagnostic["hammerspoonRcmd"] is False
+        assert set(diagnostic) == {"ok", "running", "pid", "version", "accessibilityTrusted", "tapEnabled", "paused",
+                                   "intercepting", "active", "updated", "hammerspoonRcmd", "config", "configError", "error"}
+        assert diagnostic["running"] is False and diagnostic["intercepting"] is False and diagnostic["ok"] is False
+        assert diagnostic["version"] is None and diagnostic["hammerspoonRcmd"] is False and diagnostic["pid"] is None
         assert diagnostic["config"] == str(config)
         assert invoke("path").stdout.strip() == str(config)
+        preview = json.loads(invoke("preview", "q", "--json").stdout)
+        assert set(preview) == {"ok", "side", "frontmost", "trigger", "letters"} and preview["letters"][0]["letter"] == "q"
+        assert set(json.loads(invoke("login", "--json").stdout)) == {"ok", "openAtLogin", "status"}
         assert files() == before_reads
-        dynamic.append("List/status/path return only their declared fields; read operations create no files or keyboard log/status artifact")
+        dynamic.append("List/status/path/preview/login return only their declared fields; read operations create no files or keyboard log/status artifact")
 
         marker = "private-test-input-never-retained"
         result = run([gui, "--simulate", f"right:q,invalid:{marker}"], env=env)
@@ -104,10 +111,10 @@ def main():
     for source in event_sources:
         assert not raw_text_or_logging.search(source.read_text()), f"Event handling logging/text capture needs review: {source.name}"
     config_source = (ROOT / "Sources/Shared/Config.swift").read_text()
-    runtime_status = re.search(r"struct RuntimeStatus: Codable\s*\{([^}]+)\}", config_source)
+    runtime_status = re.search(r"struct RuntimeStatus: Codable[^{]*\{([^}]+)\}", config_source)
     assert runtime_status
     assert set(re.findall(r"\bvar\s+(\w+)\s*:", runtime_status.group(1))) == {
-        "pid", "accessibilityTrusted", "tapEnabled", "version", "updated"
+        "pid", "accessibilityTrusted", "tapEnabled", "paused", "version", "updated"
     }
     detail(
         "privacy",
@@ -116,7 +123,7 @@ def main():
         static_checks=[
             f"{len(sources)} Swift source files checked for listed network/analytics/clipboard APIs",
             "EventTap and KeyEngine contain no listed raw keyboard text extraction or logging APIs",
-            "RuntimeStatus source schema contains only PID, permission/interception flags, version and timestamp",
+            "RuntimeStatus source schema contains only PID, permission/interception/pause flags, version and timestamp",
         ],
         boundary="Dynamic coverage is CLI reads/writes and --simulate with disposable state; "
         "file assertions cover that state tree. Network/clipboard and event logging claims are scoped source checks, "

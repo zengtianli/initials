@@ -16,7 +16,7 @@ enum Snapshot {
             } else {
                 let panel = PickerPanel()
                 let side: Side = args.contains("--right") ? .right : .left
-                try panel.snapshot(PickerPanel.entries(config: config, side: side, running: Launcher.runningApps()),
+                try panel.snapshot(PickerPanel.entries(config: config, side: side, running: RunningApp.current()),
                                    to: url, appearance: appearance)
             }
         } catch {

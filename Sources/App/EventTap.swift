@@ -8,6 +8,8 @@ import Carbon.HIToolbox
 final class EventTap {
     var engine = KeyEngine()
     var onOutput: ((KeyOutput) -> Void)?
+    /// Called after each watchdog pass, so the app can refresh its status file when trust or the tap changed.
+    var onWatchdog: (() -> Void)?
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     private var watchdog: Timer?
@@ -38,7 +40,10 @@ final class EventTap {
         source = CFMachPortCreateRunLoopSource(nil, port, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: port, enable: true)
-        watchdog = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.reenable() }
+        watchdog = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.reenable()
+            self?.onWatchdog?()
+        }
         let center = NSWorkspace.shared.notificationCenter
         center.addObserver(self, selector: #selector(reenableFromNotification), name: NSWorkspace.didWakeNotification, object: nil)
         center.addObserver(self, selector: #selector(reenableFromNotification), name: NSWorkspace.sessionDidBecomeActiveNotification, object: nil)

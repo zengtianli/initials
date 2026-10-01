@@ -191,13 +191,13 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         let conflicts = side == .left ? config.leftHoldConflicts() : []
         conflictLabel.isHidden = conflicts.isEmpty
         conflictLabel.stringValue = T("⚠︎ 按住左 ⌘ 会占用这些常用快捷键：", "⚠︎ Holding left ⌘ takes over these shortcuts: ")
-            + conflicts.map { "⌘\($0.letter.uppercased()) \($0.shortcut)" }.joined(separator: T("、", ", "))
+            + conflicts.map { "⌘\($0.letter.uppercased()) \($0.name)" }.joined(separator: T("、", ", "))
             + T("。可关掉“使用与右 ⌘ 相同的字母”给左边单独设字母。", ". Turn off shared letters to give left ⌘ its own.")
         shareCheck.isHidden = side == .right
         shareCheck.state = s.useRightBindings ? .on : .off
         hideCheck.state = s.hideIfFrontmost ? .on : .off
         cycleCheck.state = s.cycleUnbound ? .on : .off
-        let editable = !(side == .left && s.useRightBindings)
+        let editable = config.bindingsEditable(side)
         addButton.isEnabled = editable
         removeButton.isEnabled = editable
         importButton.isEnabled = editable && FileManager.default.fileExists(atPath: Hammerspoon.keymaps.path)
@@ -214,7 +214,9 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         guard let window, let content = window.contentView else { return }
         content.layoutSubtreeIfNeeded()
         let height = content.fittingSize.height
-        guard abs(height - content.frame.height) > 0.5 else { return }
+        // Compare with the window, not the content view: layout can already have stretched the content view
+        // of a window that is not on screen while the window kept its old height.
+        guard abs(height - window.contentRect(forFrameRect: window.frame).height) > 0.5 else { return }
         var frame = window.frame
         let newFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: NSSize(width: 620, height: height)))
         frame.origin.y += frame.height - newFrame.height
@@ -230,9 +232,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             : T("⚠︎ 需要授权“辅助功能”才能接收 ⌘ 按键", "⚠︎ Allow Accessibility so Initials can receive ⌘ keys")
         permissionLabel.textColor = trusted ? .systemGreen : .systemOrange
         permissionButton.isHidden = trusted
-        let hasMacKit = FileManager.default.fileExists(atPath: Hammerspoon.mackitConfigDirectory.path)
+        // Only an older MacKit still has an rcmd module to switch off.
+        let hasRcmd = FileManager.default.fileExists(atPath: Hammerspoon.mackitConfigDirectory.path) && Hammerspoon.rcmdInstalled
         let rcmdOn = Hammerspoon.rcmdEnabled
-        hammerspoonLabel.superview?.isHidden = !hasMacKit
+        hammerspoonLabel.superview?.isHidden = !hasRcmd
         hammerspoonLabel.stringValue = rcmdOn
             ? T("Hammerspoon 的 rcmd 也在处理右 ⌘ + 字母。确认 Initials 可用后关掉它，避免两边同时处理。",
                 "Hammerspoon's rcmd also handles right ⌘ + letter. Once Initials works, turn it off so only one tool handles the keys.")
@@ -270,10 +273,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
 
     /// The checkboxes show `enabled && trigger`, so switching one on also re-enables a side the CLI disabled.
     private func setTrigger(_ change: (inout SideConfig) -> Void) {
-        config.update(side) { s in
-            if !s.enabled { s.hold = false; s.doubleTap = false; s.enabled = true }
-            change(&s)
-        }
+        config.setTrigger(side, change)
         commit()
     }
     @objc private func toggleShare() { config.update(.left) { $0.useRightBindings = shareCheck.state == .on }; commit() }
@@ -290,7 +290,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     @objc func removeBinding() {
         guard table.selectedRow >= 0, table.isEnabled else { return }
         let letter = letters[table.selectedRow]
-        config.update(side) { $0.bindings[letter] = nil }
+        do { try config.unpin(letter, on: side) } catch { message.stringValue = error.localizedDescription; return }
         commit(T("已移除 \(letter.uppercased())", "Removed \(letter.uppercased())"))
     }
 
@@ -320,9 +320,9 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         panel.beginSheetModal(for: window) { [weak self] response in
             guard let self, response == .OK, let url = panel.url, let binding = AppCatalog.binding(for: url),
                   let letter = popup.selectedItem?.representedObject as? String else { return }
-            self.config.update(self.side) { s in
-                if let existing, existing != letter { s.bindings[existing] = nil }
-                s.bindings[letter] = binding
+            do { try self.config.pin(binding, to: letter, on: self.side, movingFrom: existing) } catch {
+                self.message.stringValue = error.localizedDescription
+                return
             }
             self.commit(T("\(letter.uppercased()) → \(binding.name)", "\(letter.uppercased()) → \(binding.name)"))
         }
@@ -331,7 +331,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     @objc private func importHammerspoon() {
         do {
             let imported = try Hammerspoon.importLetters()
-            config.update(side) { s in s.bindings.merge(imported.bindings) { _, new in new } }
+            try config.merge(imported.bindings, into: side)
             var note = T("已导入 \(imported.bindings.count) 个字母", "Imported \(imported.bindings.count) letters")
             if !imported.unresolved.isEmpty {
                 note += T("；未找到：", "; not found: ") + imported.unresolved.map { "\($0.letter)=\($0.app)" }.joined(separator: ", ")
@@ -476,10 +476,31 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         hammerspoonLabel.superview?.isHidden = true
         fitWindow()
         // The frame view includes the title bar and window buttons.
-        guard let view = window?.contentView?.superview ?? window?.contentView else { return }
+        guard let window, let content = window.contentView else { return }
+        let view = content.superview ?? content
         view.layoutSubtreeIfNeeded()
+        // Fail rather than publish a clipped render: every control must sit inside the content area.
+        var controls: [NSView] = [permissionLabel, sidePicker, sideNote, holdCheck, tapCheck,
+                                  tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck]
+        if !shareCheck.isHidden { controls.append(shareCheck) }
+        if !conflictLabel.isHidden { controls.append(conflictLabel) }
+        let area = view.convert(window.contentLayoutRect, from: nil).insetBy(dx: -1, dy: -1)
+        if let clipped = controls.first(where: { !area.contains(view.convert($0.bounds, from: $0)) }) {
+            throw SnapshotLayoutError(control: String(describing: type(of: clipped)), side: side,
+                                      frame: view.convert(clipped.bounds, from: clipped), area: area)
+        }
         view.displayIfNeeded()
         try writeRetinaPNG(of: view, to: url)
+    }
+}
+
+struct SnapshotLayoutError: Error, CustomStringConvertible {
+    let control: String
+    let side: Side
+    let frame: NSRect
+    let area: NSRect
+    var description: String {
+        "Settings snapshot (\(side.rawValue)): a \(control) at \(NSStringFromRect(frame)) lies outside the content area \(NSStringFromRect(area))"
     }
 }
 

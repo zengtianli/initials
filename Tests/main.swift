@@ -177,6 +177,111 @@ do {
     try? FileManager.default.removeItem(at: dir)
 }
 
+// MARK: Edits shared by Settings and the CLI
+
+do {
+    func refused(_ body: () throws -> Void) -> Bool {
+        do { try body(); return false } catch { return (error as? ConfigEditError) == .leftShared }
+    }
+    let music = Binding(name: "Music", bundleID: "com.apple.Music", path: nil)
+    let mail = Binding(name: "Mail", bundleID: "com.apple.mail", path: nil)
+    var c = Config()
+    check(c.bindingsEditable(.right) && !c.bindingsEditable(.left), "shared left table is not editable")
+    check(refused { try c.pin(music, to: "m", on: .left) } && refused { try c.unpin("m", on: .left) }
+          && refused { try c.merge(["m": music], into: .left) } && c.left.bindings.isEmpty, "shared left refuses pin/unpin/import")
+    check((try! c.pin(music, to: "m", on: .right)) == nil && c.right.bindings["m"] == music, "pin a free letter")
+    check((try! c.pin(music, to: "m", on: .right)) == nil, "pinning the same app again replaces nothing")
+    check((try! c.pin(mail, to: "m", on: .right)) == music, "pin reports the app it replaced")
+    check((try! c.pin(mail, to: "n", on: .right, movingFrom: "m")) == nil && c.right.bindings == ["n": mail], "move clears the old letter")
+    check((try! c.unpin("n", on: .right)) == mail && (try! c.unpin("n", on: .right)) == nil, "unpin returns what it removed")
+    c.right.bindings = ["m": music, "d": mail]
+    check((try! c.merge(["m": mail, "x": music, "d": mail], into: .right)) == ["m"], "import reports only letters whose app changed")
+    c.left.useRightBindings = false
+    check(c.bindingsEditable(.left) && (try! c.pin(music, to: "q", on: .left)) == nil && c.right.bindings["q"] == nil, "independent left edits its own table")
+    c.right.enabled = false
+    c.setTrigger(.right) { $0.doubleTap = true }
+    check(c.right.enabled && !c.right.hold && c.right.doubleTap, "switching a trigger on re-enables the side with only that trigger")
+    c.setTrigger(.right) { $0.hold = true }
+    check(c.right.hold && c.right.doubleTap, "an enabled side keeps its other trigger")
+    var shortcuts = Config()
+    shortcuts.left.hold = true
+    shortcuts.right.bindings = ["c": music, "v": mail, "k": music]
+    check(shortcuts.leftHoldConflicts().map(\.id) == ["copy", "paste"], "conflicts carry stable ids")
+}
+
+// MARK: Letter preview (panel rows and `initials preview`)
+
+do {
+    let safari = RunningApp(pid: 20, name: "Safari", bundleID: "com.apple.Safari", path: "/Applications/Safari.app")
+    let slack = RunningApp(pid: 21, name: "Slack", bundleID: "com.tinyspeck.slackmacgap", path: nil)
+    let music = RunningApp(pid: 10, name: "Music", bundleID: "com.apple.Music", path: nil)
+    var c = Config()
+    c.right.bindings = ["m": Binding(name: "Music", bundleID: "com.apple.Music", path: nil)]
+    let rows = LetterPreview.rows(config: c, side: .right, running: [slack, music, safari])
+    check(rows.map(\.letter) == ["m", "s"], "rows list pinned letters and letters with running apps: \(rows.map(\.letter))")
+    check(rows[0].pinned && rows[0].title == "Music" && rows[0].candidates.isEmpty, "pinned row shows the pinned app")
+    check(!rows[1].pinned && rows[1].title == "Safari +1" && rows[1].candidates.map(\.name) == ["Safari", "Slack"], "cycle row: first by name +N")
+    check(LetterPreview.row(letter: "q", config: c, side: .right, running: [safari]).isEmpty, "a letter with nothing is empty")
+    check(LetterPreview.rows(config: c, side: .left, running: [safari]).map(\.letter) == ["m", "s"], "shared left previews the right letters")
+    c.right.cycleUnbound = false
+    check(LetterPreview.rows(config: c, side: .right, running: [safari]).map(\.letter) == ["m"], "cycling off: pinned letters only")
+    check(cycleCandidates(letter: "s", running: [slack, safari]).map(\.pid) == [20, 21], "cycle order is by name")
+    check(AppAction.open(Binding(name: "Music")).summary == "open Music" && AppAction.hide(safari).verb == "hide"
+          && AppAction.nothing.summary == "nothing" && AppAction.nothing.appName == nil, "action summaries")
+}
+
+// MARK: Runtime status file
+
+do {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("initials-status-\(getpid())")
+    let url = dir.appendingPathComponent("status.json")
+    try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    try! #"{"pid":42,"accessibilityTrusted":true,"tapEnabled":true,"version":"1.1.2","updated":"2026-09-29T03:11:22Z"}"#
+        .write(to: url, atomically: true, encoding: .utf8)
+    check(RuntimeStatus.read(from: url).map { $0.pid == 42 && $0.paused == nil } == true, "1.1.2 status files still read, paused unknown")
+    let mine = RuntimeStatus(pid: 7, accessibilityTrusted: true, tapEnabled: true, paused: true, version: "t", updated: Date(timeIntervalSince1970: 1_800_000_000))
+    mine.write(to: url)
+    check(RuntimeStatus.read(from: url) == mine, "status round trip keeps paused")
+    RuntimeStatus.remove(ifOwnedBy: 8, at: url)
+    check(FileManager.default.fileExists(atPath: url.path), "another pid's quit leaves the status file")
+    RuntimeStatus.remove(ifOwnedBy: 7, at: url)
+    check(!FileManager.default.fileExists(atPath: url.path), "the owner's quit removes it")
+    check(!RuntimeStatus.isInitialsProcess(getpid()) && !RuntimeStatus.isInitialsProcess(0)
+          && !RuntimeStatus.isInitialsProcess(Int32.max), "only a live Initials binary counts as running")
+    mine.write(to: url)
+    check(RuntimeStatus.live(at: url) == nil, "a status file whose pid is not a live Initials app is no running copy")
+    try? FileManager.default.removeItem(at: url)
+    check(RuntimeStatus.live(at: url) == nil, "no status file, no running copy")
+    var later = mine
+    later.updated = mine.updated.addingTimeInterval(30)
+    check(later.sameState(as: mine), "the watchdog does not rewrite a status that only aged")
+    later.accessibilityTrusted = false
+    check(!later.sameState(as: mine), "revoked Accessibility is a change the watchdog writes")
+    var untapped = mine
+    untapped.tapEnabled = false
+    check(!untapped.sameState(as: mine) && !mine.sameState(as: nil), "a dead tap or a missing file is written again")
+    mine.write(to: url)
+    let written = try! Data(contentsOf: url)
+    check(!later.sameState(as: mine) && !mine.publish(onlyIfChanged: true, to: url) && (try! Data(contentsOf: url)) == written,
+          "a watchdog pass with nothing changed leaves the file alone")
+    var aged = mine
+    aged.updated = mine.updated.addingTimeInterval(60)
+    check(!aged.publish(onlyIfChanged: true, to: url), "only a newer time is no reason to write")
+    check(later.publish(onlyIfChanged: true, to: url) && RuntimeStatus.read(from: url)?.accessibilityTrusted == false,
+          "a watchdog pass after Accessibility was revoked rewrites the file")
+    try? FileManager.default.removeItem(at: url)
+    check(mine.publish(onlyIfChanged: true, to: url) && RuntimeStatus.read(from: url) == mine, "a deleted status file is written again")
+    try? FileManager.default.removeItem(at: url)
+    var active = Config()
+    check(active.isActive(tapEnabled: true, paused: false) && !active.isActive(tapEnabled: true, paused: true)
+          && !active.isActive(tapEnabled: false, paused: false), "active needs the tap on and not paused")
+    active.right.enabled = false
+    check(active.isActive(tapEnabled: true, paused: false), "either ⌘ key enabled keeps the app active")
+    active.left.enabled = false
+    check(!active.isActive(tapEnabled: true, paused: false), "both ⌘ keys disabled is not active")
+    try? FileManager.default.removeItem(at: dir)
+}
+
 // MARK: Hammerspoon import
 
 do {

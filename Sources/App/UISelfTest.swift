@@ -2,15 +2,20 @@ import AppKit
 
 /// Runs real AppKit views without starting the app lifecycle or ordering a window in.
 enum UISelfTest {
-    static func run(to directory: URL) -> Never {
+    /// Self-tests save and write status, so they refuse to run against the real support folder.
+    static func requireIsolatedSupport(_ flag: String) {
         guard let isolated = ProcessInfo.processInfo.environment["INITIALS_SUPPORT_DIR"],
               !isolated.isEmpty,
               URL(fileURLWithPath: isolated).standardizedFileURL != FileManager.default
                 .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("cyou.tianli.initials").standardizedFileURL else {
-            fputs("--ui-self-test requires an isolated INITIALS_SUPPORT_DIR\n", stderr)
+            fputs("\(flag) requires an isolated INITIALS_SUPPORT_DIR\n", stderr)
             exit(2)
         }
+    }
+
+    static func run(to directory: URL) -> Never {
+        requireIsolatedSupport("--ui-self-test")
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
         do {

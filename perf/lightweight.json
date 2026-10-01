@@ -235,5 +235,35 @@
       "raw": "perf/raw/picker-operation-1.1.2.json",
       "load": "{ 3.93 5.25 6.56 }"
     }
-  ]
+  ],
+  "reused_for": {
+    "1.2.0 (6)": {
+      "reviewed_at": "2026-10-01",
+      "reason": "1.2.0 新增给 agent 用的 initials 命令（preview、pause/resume、login、move、cycle、hide-front），菜单栏暂停改走同一暂停通道并写状态文件，状态文件只由写它的进程删除，30 秒看门狗在授权或拦截状态变化时改写状态文件，并修正设置窗左 ⌘ 页离屏快照的窗口高度；按键回调（KeyEngine）未改，字母面板与右 ⌘ 设置页离屏渲染与 1.1.2 逐像素相同。以下数字为 1.1.2 (4) 在 2026-09-29 的实测，仅供参考，1.2.0 尚未重新测量。",
+      "reason_en": "1.2.0 adds the agent-facing initials commands (preview, pause/resume, login, move, cycle, hide-front), routes the menu-bar Pause through the same pause channel with a status file that only its writer removes, lets the 30-second watchdog rewrite that file when permission or interception changes, and fixes the window height of the offscreen left-⌘ settings snapshot. The key callback (KeyEngine) is unchanged, and the letter panel and right-⌘ settings render pixel-identical to 1.1.2 offscreen. The numbers below were measured on 1.1.2 (4) on 2026-09-29 and are for reference only; 1.2.0 has not been re-measured.",
+      "reviewed_sources_sha256": {
+        "Sources/App/AppDelegate.swift": "fb041dbb62131357deacca88cb8d571f42c45bc38ac3882947d09fc25a0a60ef",
+        "Sources/App/EventTap.swift": "6f133f8e87b74b9efb7de131b13f9c4aeb02126a8b0e610329df592ec53ac3cc",
+        "Sources/App/Launcher.swift": "aa826d20b2510e30f4bb8dafb8806a13860f7e3f17776d389a23a1a0e39d9f67",
+        "Sources/App/PauseControl.swift": "c2d823edb1988a174dceaf6cb5c5787f3b55bdfaf0082fd5b5f7ea0221e002aa",
+        "Sources/App/PickerPanel.swift": "9ac0bccf1ee57e789416719bdc9a0093a76e61ab189784f86966049418412347",
+        "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
+        "Sources/App/SettingsWindowController.swift": "8a542f0f10207f474c540b78adeb41c5e9d41ac4125e2b6d8aa3bd66165f17a0",
+        "Sources/App/Snapshot.swift": "743224e0d0b5dbc5f7451cc697ec9c91023b547e88e05fad88b4026a65c374b6",
+        "Sources/App/UISelfTest.swift": "b8c825ebaf1006dc5066a225887e5cc5c61cd207d64ea9b7f93a075c3491abe0",
+        "Sources/App/main.swift": "42e3fc41df59453f1459ef0f222d9cb5d0227e067a3f116125af7f2e05dfb1b7",
+        "Sources/CLI/main.swift": "8b6ea9342a224e66a37c886537ba07cddb75e1043aca3b645a9f9f3718f4504e",
+        "Sources/Shared/AppCatalog.swift": "e34bba3f25237a6c82f1fa6980b9520fa1aa3a3e493e20ac96b4df8f4d0b1e84",
+        "Sources/Shared/Config.swift": "45b303c4e71738a7284e56c9196eba5eb9c8078f4a4678bcb22ed9b010ca32c6",
+        "Sources/Shared/Decision.swift": "c81084bd930d6d6a741ebf9bfbf5f563ae3742586dbd3a101a5ba53dea2e8d3d",
+        "Sources/Shared/Hammerspoon.swift": "e3a5c618b14b107a602b4f6ebec0aa2d88af378e435f0b6edea284c538fb7b51",
+        "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
+        "Sources/Shared/Preview.swift": "80ce0b3990f04c512099e814ef256831652187d861badf979cb34c5f371780fb",
+        "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+      },
+      "display": "historical_only",
+      "measured_version": "1.1.2 (4)",
+      "measured_executable_sha256": "3bc3d6bcaae03021f852c80cd2a1975baa7ecf83ab139cbfef02162775735260"
+    }
+  }
 }

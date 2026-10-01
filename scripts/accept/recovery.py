@@ -69,6 +69,10 @@ def main():
             (("list", "--side", "middle"), 2),
             (("unset", "1"), 2),
             (("unset", "z"), 1),
+            (("import", "--bogus"), 2),
+            (("hold", "on", "--bogus"), 2),
+            (("enable", "right", "--side", "left"), 2),
+            (("move", "a", "b"), 1),
         ]:
             no_write(*args, expected=expected)
         assert listing()["right"]["enabled"] is False
@@ -90,17 +94,21 @@ def main():
             "version": "fixture-stale",
             "updated": "2000-01-01T00:00:00Z",
         }
+        # A live process that is not Initials (this runner) must not read as the app either.
+        foreign = {**stale, "pid": os.getpid(), "version": "fixture-foreign"}
         for label, payload in [
             ("missing", None),
             ("malformed", b"not JSON\n"),
             ("stale PID", json.dumps(stale).encode()),
+            ("foreign live PID", json.dumps(foreign).encode()),
         ]:
             if payload is None:
                 status.unlink(missing_ok=True)
             else:
                 status.write_bytes(payload)
             result = json.loads(no_write("status", "--json", expected=3).stdout)
-            assert result["running"] is False
+            assert result["running"] is False and result["ok"] is False
+            no_write("pause", expected=3)
             assert result["accessibilityTrusted"] is False
             assert result["intercepting"] is False
             assert result["config"] == str(config)

@@ -271,6 +271,32 @@
         "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
       },
       "verification": "git diff 66a5ebe -- Sources Resources: only SettingsWindowController.swift self-test/close guard, UISelfTest.swift, main.swift self-test entry, and CLI version; prior 1.1.1 reuse review retained."
+    },
+    "1.2.0 (6)": {
+      "reviewed_at": "2026-10-01",
+      "reason": "沿用 1.1.0 的真实离屏导览。1.2.0 新增给 agent 用的 initials 命令、菜单栏暂停走同一暂停通道、状态文件只由写它的进程删除，并修正左 ⌘ 设置页离屏快照的窗口高度；设置窗与字母面板的控件、文字和布局未变：用同一示例配置离屏渲染，字母面板（深浅色）和右 ⌘ 设置页与 1.1.2 逐像素相同，左 ⌘ 设置页内容逐像素相同、仅整体下移 7 pt 不再贴近标题栏。不声称重新录制或已演示真实按键、应用切换/隐藏、辅助功能授权。",
+      "reason_en": "Reuse the real 1.1.0 offscreen guide. 1.2.0 adds the agent-facing initials commands, routes menu-bar Pause through the same pause channel, lets only the writing process remove the status file, and fixes the window height of the offscreen left-⌘ settings snapshot. Controls, text and layout of Settings and the letter panel are unchanged: rendered offscreen from the same example config, the letter panel (light and dark) and the right-⌘ settings page are pixel-identical to 1.1.2, and the left-⌘ page has pixel-identical content shifted down 7 pt away from the title bar. No claim of a new recording or demonstrated real keys, app switching/hiding, or Accessibility authorization.",
+      "reviewed_sources_sha256": {
+        "Sources/App/AppDelegate.swift": "fb041dbb62131357deacca88cb8d571f42c45bc38ac3882947d09fc25a0a60ef",
+        "Sources/App/EventTap.swift": "6f133f8e87b74b9efb7de131b13f9c4aeb02126a8b0e610329df592ec53ac3cc",
+        "Sources/App/Launcher.swift": "aa826d20b2510e30f4bb8dafb8806a13860f7e3f17776d389a23a1a0e39d9f67",
+        "Sources/App/PauseControl.swift": "c2d823edb1988a174dceaf6cb5c5787f3b55bdfaf0082fd5b5f7ea0221e002aa",
+        "Sources/App/PickerPanel.swift": "9ac0bccf1ee57e789416719bdc9a0093a76e61ab189784f86966049418412347",
+        "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
+        "Sources/App/SettingsWindowController.swift": "8a542f0f10207f474c540b78adeb41c5e9d41ac4125e2b6d8aa3bd66165f17a0",
+        "Sources/App/Snapshot.swift": "743224e0d0b5dbc5f7451cc697ec9c91023b547e88e05fad88b4026a65c374b6",
+        "Sources/App/UISelfTest.swift": "b8c825ebaf1006dc5066a225887e5cc5c61cd207d64ea9b7f93a075c3491abe0",
+        "Sources/App/main.swift": "42e3fc41df59453f1459ef0f222d9cb5d0227e067a3f116125af7f2e05dfb1b7",
+        "Sources/CLI/main.swift": "8b6ea9342a224e66a37c886537ba07cddb75e1043aca3b645a9f9f3718f4504e",
+        "Sources/Shared/AppCatalog.swift": "e34bba3f25237a6c82f1fa6980b9520fa1aa3a3e493e20ac96b4df8f4d0b1e84",
+        "Sources/Shared/Config.swift": "45b303c4e71738a7284e56c9196eba5eb9c8078f4a4678bcb22ed9b010ca32c6",
+        "Sources/Shared/Decision.swift": "c81084bd930d6d6a741ebf9bfbf5f563ae3742586dbd3a101a5ba53dea2e8d3d",
+        "Sources/Shared/Hammerspoon.swift": "e3a5c618b14b107a602b4f6ebec0aa2d88af378e435f0b6edea284c538fb7b51",
+        "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
+        "Sources/Shared/Preview.swift": "80ce0b3990f04c512099e814ef256831652187d861badf979cb34c5f371780fb",
+        "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+      },
+      "verification": "2026-10-01 offscreen --snapshot of 1.1.2 (4) (notarized DMG) vs 1.2.0 (6), zh+en, shots.py demo config: picker, picker-dark, settings-right identical pixels; settings-left identical below the title bar with a 14 px (2x) downward offset. git diff 695f8d9..dc0a81e -- Sources Resources reviewed."
     }
   }
 }

@@ -27,15 +27,43 @@ func decide(letter: String, bindings: [String: Binding], options: SideConfig,
         return .open(binding)
     }
     guard options.cycleUnbound else { return .nothing }
-    let candidates = running
-        .filter { $0.name.lowercased().hasPrefix(letter) }
-        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    let candidates = cycleCandidates(letter: letter, running: running)
     guard !candidates.isEmpty else { return .nothing }
     if let i = candidates.firstIndex(where: { $0.pid == frontmostPID }) {
         if candidates.count == 1 { return options.hideIfFrontmost ? .hide(candidates[i]) : .nothing }
         return .activate(candidates[(i + 1) % candidates.count])
     }
     return .activate(candidates[0])
+}
+
+/// Running apps whose name starts with the letter, in the order an unpinned letter cycles them.
+func cycleCandidates(letter: String, running: [RunningApp]) -> [RunningApp] {
+    running.filter { $0.name.lowercased().hasPrefix(letter) }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+}
+
+extension AppAction {
+    /// Stable verb for dry runs and `initials preview --json`.
+    var verb: String {
+        switch self {
+        case .open: return "open"
+        case .activate: return "activate"
+        case .hide: return "hide"
+        case .nothing: return "nothing"
+        }
+    }
+
+    /// The app the action targets, if any.
+    var appName: String? {
+        switch self {
+        case .open(let binding): return binding.name
+        case .activate(let app), .hide(let app): return app.name
+        case .nothing: return nil
+        }
+    }
+
+    /// "open Music", "hide Mail", "nothing" (the `--simulate` line).
+    var summary: String { appName.map { "\(verb) \($0)" } ?? verb }
 }
 
 func matches(_ app: RunningApp, _ binding: Binding) -> Bool {

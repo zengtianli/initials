@@ -1,7 +1,8 @@
 import Foundation
 
 /// Bridge for people coming from a Hammerspoon "rcmd" setup: read its right-⌘
-/// letters, and switch its own interception off so only one tool handles the keys.
+/// letters, and (with an older MacKit that still has the module) switch its own
+/// interception off so only one tool handles the keys.
 enum Hammerspoon {
     static var keymaps: URL {
         URL(fileURLWithPath: NSHomeDirectory() + "/.hammerspoon/keymaps.lua").resolvingSymlinksInPath()
@@ -48,8 +49,15 @@ enum Hammerspoon {
     }
     static var overrides: URL { mackitConfigDirectory.appendingPathComponent("hotkey_overrides.json") }
 
+    /// MacKit retired its rcmd module on 2026-09-27; only an older MacKit still has one to switch.
+    static var rcmdModule: URL {
+        URL(fileURLWithPath: NSHomeDirectory() + "/.hammerspoon/modules/rcmd.lua")
+    }
+    static var rcmdInstalled: Bool { FileManager.default.fileExists(atPath: rcmdModule.path) }
+
     /// MacKit enables rcmd for the "tianli" profile unless `features.rcmd` is false.
     static var rcmdEnabled: Bool {
+        guard rcmdInstalled else { return false }
         let profileURL = mackitConfigDirectory.appendingPathComponent("profile.json")
         guard let data = try? Data(contentsOf: profileURL),
               let profile = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -67,6 +75,8 @@ enum Hammerspoon {
     /// Sets `features.rcmd`, keeping every other override, then asks Hammerspoon to reload.
     @discardableResult
     static func setRcmd(enabled: Bool) throws -> String {
+        // Writing the flag and reloading Hammerspoon without the module would only disturb it.
+        guard rcmdInstalled else { throw RcmdMissing() }
         var json = readOverrides()
         var features = (json["features"] as? [String: Any]) ?? [:]
         features["rcmd"] = enabled
@@ -75,6 +85,13 @@ enum Hammerspoon {
         let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: overrides, options: .atomic)
         return reload()
+    }
+
+    struct RcmdMissing: LocalizedError {
+        var errorDescription: String? {
+            T("没有找到 MacKit 的 Hammerspoon rcmd 模块（~/.hammerspoon/modules/rcmd.lua），无需切换。",
+              "MacKit's Hammerspoon rcmd module (~/.hammerspoon/modules/rcmd.lua) is not installed; nothing to switch.")
+        }
     }
 
     private static func reload() -> String {
