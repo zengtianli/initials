@@ -99,7 +99,8 @@ The [Resource use](#resource-use) section is generated from [perf/lightweight.js
 ```bash
 bash build.sh                   # unit tests first, then app + CLI, signed → build/Initials.app
 INITIALS_BUILD_DIR=build/dev CODESIGN_IDENTITY=- bash build.sh  # personal dev build; leaves build/Initials.app alone
-bash scripts/install.sh
+bash scripts/install.sh         # quit Initials first; installs to /Applications, links the CLI into ~/.local/bin
+bash scripts/install.sh --restart  # while Initials runs: quit, install, relaunch in the background (no focus change)
 python3 scripts/release.py
 python3 scripts/shots.py        # regenerate site/assets screenshots and scenes from the built app
 python3 scripts/build-site.py

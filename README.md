@@ -102,6 +102,7 @@ initials pause --json && initials status --json | jq '{paused, intercepting, act
 bash build.sh               # 先跑单元测试，再编译 app 与 CLI、签名 → build/Initials.app
 INITIALS_BUILD_DIR=build/dev CODESIGN_IDENTITY=- bash build.sh  # 自用开发构建，不动发布用的 build/Initials.app
 bash scripts/install.sh     # 退出 Initials 后安装到 /Applications，CLI 链到 ~/.local/bin
+bash scripts/install.sh --restart  # Initials 正在运行时：退出、安装，再在后台重启（不抢焦点）
 python3 scripts/release.py  # 公证 app 与 DMG 并装订，写 build/release.json
 python3 scripts/shots.py    # 从构建出的 app 重新生成 site/assets 截图与场景图
 python3 scripts/build-site.py  # 用 release.json 生成 build/site（主页 + 下载）
