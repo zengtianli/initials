@@ -463,5 +463,41 @@
       "raw": "perf/raw/picker-operation-1.3.0-7.json",
       "load": "负载均值 4.11 9.58 15.71；total = 8192.00M  used = 6750.69M  free = 1441.31M"
     }
-  ]
+  ],
+  "reused_for": {
+    "1.3.1 (8)": {
+      "display": "historical_only",
+      "measured_version": "1.3.0 (7)",
+      "measured_executable_sha256": "f12991d2f3d83f14afad08a5a4c3a97f3a522ac1f0128f5d083b96af32f7b734",
+      "reviewed_at": "2026-10-04T02:31:58.190016+08:00",
+      "reason": "本次增加按需检查更新、下载与安装界面，并把新装机的 iCloud 同步改为可选；按键事件引擎和切换路径未变，原配置保留。沿用 1.3.0 的测量日期、设备和构建哈希，明确仅供历史参考；未在本轮并行构建期间重复性能采样。",
+      "reason_en": "This release adds on-demand update checking, download and installation UI, and makes iCloud sync optional on a fresh installation. The key-event engine and switching path are unchanged and existing settings are preserved. The original 1.3.0 measurement date, device and build hash are retained as historical reference; performance sampling was not repeated during this batch of builds.",
+      "reviewed_sources_sha256": {
+        "Sources/App/AppDelegate.swift": "b6a7cfdb109796d48bd77499a1beb487faf66d0bf8bc6ce24601a589fd28bcee",
+        "Sources/App/CloudSyncController.swift": "046dc96f2dfbb91db12c93453177cd17c15426af1ffef6e98482f8ec883f4be9",
+        "Sources/App/EventTap.swift": "6f133f8e87b74b9efb7de131b13f9c4aeb02126a8b0e610329df592ec53ac3cc",
+        "Sources/App/Launcher.swift": "aa826d20b2510e30f4bb8dafb8806a13860f7e3f17776d389a23a1a0e39d9f67",
+        "Sources/App/PauseControl.swift": "c2d823edb1988a174dceaf6cb5c5787f3b55bdfaf0082fd5b5f7ea0221e002aa",
+        "Sources/App/PickerPanel.swift": "9ac0bccf1ee57e789416719bdc9a0093a76e61ab189784f86966049418412347",
+        "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
+        "Sources/App/SettingsWindowController.swift": "b6767c4c7b1a5921f7d92ea0351616acb3125bc20e6df4251d31f65e14756ddc",
+        "Sources/App/Snapshot.swift": "743224e0d0b5dbc5f7451cc697ec9c91023b547e88e05fad88b4026a65c374b6",
+        "Sources/App/UISelfTest.swift": "9c51769136b49e754726c9b7457ce9c712648720d4f869dd74b488e00ede5056",
+        "Sources/App/main.swift": "42e3fc41df59453f1459ef0f222d9cb5d0227e067a3f116125af7f2e05dfb1b7",
+        "Sources/CLI/main.swift": "03daa41539e14f34b78bd9454c503185d9077e50261e8e112a51e886bb901e67",
+        "Sources/Shared/AppCatalog.swift": "71330e6bcad7c48eee7746593542521b48bbc017a573bc896828cae52c1312cf",
+        "Sources/Shared/CloudSync.swift": "bbf35456c55d8704caee32d29d848fde0c0724258266f211a0e0480b3cb01d80",
+        "Sources/Shared/Config.swift": "847aee29b031b0eba404f081594bda1063e941aefcc49f477df306b550085493",
+        "Sources/Shared/ConfigTransfer.swift": "8fd68e4da3236af2c2b86f6e3a727f2587019feaf66fa3a34f004bfb1ba5d643",
+        "Sources/Shared/Decision.swift": "c81084bd930d6d6a741ebf9bfbf5f563ae3742586dbd3a101a5ba53dea2e8d3d",
+        "Sources/Shared/Hammerspoon.swift": "e3a5c618b14b107a602b4f6ebec0aa2d88af378e435f0b6edea284c538fb7b51",
+        "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
+        "Sources/Shared/Lifecycle/AppConfiguration.swift": "66d1b04072dbcbcbbc556afb79be1181396fc8bd1a6940d5960adea742219edc",
+        "Sources/Shared/Lifecycle/AppLifecycle.swift": "07adaba8327f855b9a497346384ece9f8a526089c1c2f987b8873ab95a4fec3c",
+        "Sources/Shared/Lifecycle/AppLifecycleUI.swift": "c5bfb42bb97555125d3822a98ab0bab71adf368f0de1439f170f0dddb7456974",
+        "Sources/Shared/Preview.swift": "80ce0b3990f04c512099e814ef256831652187d861badf979cb34c5f371780fb",
+        "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+      }
+    }
+  }
 }

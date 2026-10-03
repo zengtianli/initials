@@ -54,6 +54,11 @@ def exercise(cli, root, env, check):
     a = {**env, "INITIALS_ICLOUD_DIR": str(cloud)}
     b = {**a, "INITIALS_SUPPORT_DIR": str(root / "mini-support")}
     cloud_file = cloud / "config.json"
+    check(not command("sync", "status", target=b)["enabled"], "new installation lets the user choose iCloud sync")
+    command("sync", "now", target=b)
+    check(not cloud_file.exists(), "default-off does not touch iCloud")
+    command("sync", "on", target=a)
+    command("sync", "on", target=b)
     command("sync", "now", target=b)
     check(not cloud_file.exists() and not (root / "mini-support/config.json").exists(), "new empty Mac never uploads defaults while waiting for cloud")
     command("sync", "now", target=a)
@@ -93,6 +98,14 @@ def exercise(cli, root, env, check):
     cloud_file.write_bytes(valid_cloud)
     command("sync", "now", target=a)
     check(config.read_bytes() == valid_local, "sync resumes after cloud file recovery")
+    update_feed = root / "update-feed.json"
+    update_feed.write_text(json.dumps({"bundle_id": "cyou.tianli.initials", "version": "9.0.0", "build": "99",
+                                      "channel": "test", "filename": "Fixture.zip", "sha256": "0" * 64}))
+    update_env = {**env, "INITIALS_UPDATE_FEED": str(update_feed)}
+    result = command("updates", target=update_env)
+    check(result["updateAvailable"] and config.read_bytes() == valid_local, "real CLI checks newer release without modifying settings")
+    update_feed.write_text("{}")
+    result = command("updates", target=update_env, expected=2)
+    check(not result["ok"] and config.read_bytes() == valid_local, "invalid update feed is a failure, never reported as latest")
     # All test state is disposable; restore the original fixture for the rest of acceptance.
     config.write_bytes(original)
-

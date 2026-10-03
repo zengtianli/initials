@@ -3,7 +3,7 @@ import Foundation
 /// Uses the user's ordinary iCloud Drive folder. The local config remains the
 /// runtime source, so switching apps never waits for a download or a network call.
 enum CloudSyncStore {
-    struct Preferences: Codable { var enabled = true }
+    struct Preferences: Codable { var enabled = false }
     struct State: Codable { var cloud: Config; var local: Config }
     static var preferencesURL: URL { Paths.supportDirectory.appendingPathComponent("sync-preferences.json") }
     static var stateURL: URL { Paths.supportDirectory.appendingPathComponent("sync-state.json") }

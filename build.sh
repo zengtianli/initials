@@ -3,6 +3,14 @@
 set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
+if find Sources Tests -type f -name '*sync-conflict-*' -print -quit | grep -q .; then
+  echo 'Syncthing conflict copies remain in compilation inputs; reconcile and archive them before building.' >&2
+  exit 1
+fi
+LIFECYCLE_VENDOR="$HOME/Dev/tools/dev/lib/tools/macapp/swift-shared/vendor-lifecycle.py"
+if [ -f "$LIFECYCLE_VENDOR" ]; then
+  python3 "$LIFECYCLE_VENDOR" --platform mac --target-source-dir Sources/Shared/Lifecycle --check
+fi
 # Optional helper that pins a specific Xcode; plain `xcrun` is used without it.
 XCODE_ENV_SH="${XCODE_ENV_SH:-$HOME/Dev/tools/dev/lib/tools/macapp/xcode_env.sh}"
 if [ -f "$XCODE_ENV_SH" ]; then source "$XCODE_ENV_SH"; xcode_env_use macosx; fi

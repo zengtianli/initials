@@ -150,6 +150,12 @@ def main():
     (out / "downloads").mkdir()
     shutil.copy2(dmg, out / "downloads" / dmg.name)
     (out / "downloads/SHA256SUMS.txt").write_text(f"{release['sha256']}  {dmg.name}\n")
+    updates = {"bundle_id": "cyou.tianli.initials", "version": release["version"],
+               "build": str(release["build"]), "channel": "public", "sha256": release["sha256"],
+               "size_bytes": release["size_bytes"], "installation": "bundle",
+               "download_url": f"{ORIGIN}/downloads/{dmg.name}",
+               "release_url": f"https://github.com/zengtianli/initials/releases/tag/v{release['version']}"}
+    (out / "updates.json").write_text(json.dumps(updates, ensure_ascii=False, indent=2) + "\n")
     source = (ROOT / "site/index.html").read_text()
     source = re.sub(r'(src|href|poster)="(assets|media|downloads)/', r'\1="/\2/', source)
     parser = EnglishPage(json.loads((ROOT / "site/locales/en.json").read_text()))

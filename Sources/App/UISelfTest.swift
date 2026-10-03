@@ -27,6 +27,9 @@ enum UISelfTest {
             ]
             let settings = SettingsWindowController(config: config)
             var checks = try settings.checkOffscreenInteractions(to: directory)
+            AppLifecycleUI.install(name: "Initials", configuration: nil,
+                                   updateSource: .manifest(URL(string: "https://initials.tianli.cyou/updates.json")!))
+            checks.merge(try AppLifecycleUI.shared.offscreenSnapshot(to: directory.appendingPathComponent("updates.png"))) { _, value in value }
             try checkCloudNotifications(to: directory, checks: &checks)
 
             let panel = PickerPanel()
@@ -71,6 +74,7 @@ enum UISelfTest {
         let cloud = directory.appendingPathComponent("fixture-cloud", isDirectory: true)
         setenv("INITIALS_ICLOUD_DIR", cloud.path, 1)
         defer { unsetenv("INITIALS_ICLOUD_DIR") }
+        try CloudSyncStore.setEnabled(true)
         let controller = CloudSyncController()
         var updates = 0
         controller.onUpdate = { _ in updates += 1 }

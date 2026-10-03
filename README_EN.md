@@ -37,11 +37,11 @@ macOS 14+, Apple Silicon.
 
 1. Open the DMG, drag Initials to Applications and open it. Signed with Developer ID and notarized by Apple.
 2. Click "Open Accessibility Settings…" and switch Initials on under System Settings › Privacy & Security › Accessibility. The top of Settings then reads "✓ Accessibility granted — active"; no restart needed. Initials only looks at ⌘ and the letter that follows; it records nothing.
-3. Click "Add…" to pin apps, or "Import Settings…". Macs using the same Apple ID with iCloud Drive enabled automatically share existing settings. Hammerspoon import is also available.
+3. Click "Add…" to pin apps, or "Import Settings…". After you enable settings sync, Macs using the same Apple ID with iCloud Drive enabled share existing settings. Hammerspoon import is also available.
 
 ## Settings sync and backup
 
-**iCloud Drive** sync is on by default for both letter tables, triggers, hide/cycle options and timing settings. Use the same Apple ID, enable iCloud Drive and install Initials 1.3.0 or later on each Mac. Turn it off per Mac with "Sync settings automatically with iCloud Drive" in Settings. The file is `Initials/config.json` in iCloud Drive; macOS handles transfers. Local settings work offline and sync when online. An empty new Mac never overwrites cloud settings. Independent offline letter edits merge; a pending local edit wins a conflict on the same letter.
+Choose "Sync settings automatically with iCloud Drive" in Settings to remember both letter tables, triggers, hide/cycle options and timing settings with your system Apple ID. Fresh installs start with sync off; an existing choice is preserved. Use the same Apple ID and enable iCloud Drive and sync on each Mac. The file is `Initials/config.json` in iCloud Drive; macOS handles transfers. Local settings work offline and sync when online. An empty new Mac never overwrites cloud settings. Independent offline letter edits merge; a pending local edit wins a conflict on the same letter.
 
 For manual migration, click "Export Settings…" on the old Mac, transfer `Initials-config.json`, then click "Import Settings…" on the new Mac. Import restores the whole configuration, keeps missing apps' letters and finds local apps by bundle ID. The previous local file is kept as `config-before-import.json` beside the active config. Invalid imports leave settings untouched. Accessibility permission, Open at Login and pause state remain separate on each Mac.
 
@@ -55,7 +55,9 @@ initials sync on
 initials sync now                 # Reconcile files now; macOS handles cloud transfer
 ```
 
-Only app choices and shortcut settings are synced. No typed input is recorded and no developer server is used. Sync requires an Apple ID and network; app switching works offline.
+Only app choices and shortcut settings are synced. No typed input is recorded. iCloud uses your own Apple ID; app switching works offline.
+
+"Check for Updates…" is available in the menu bar and Settings. It reads the actual release version from the product website and offers an in-app upgrade. The installer verifies SHA256, app identity and developer signature, keeps a rollback copy and preserves settings. `initials updates --json` checks without installing; a failed request is reported as a failure.
 
 ## Command line (for scripts and agents)
 

@@ -39,11 +39,11 @@
 
 1. 打开 DMG，把 Initials 拖到“应用程序”，从“应用程序”打开。安装包使用 Developer ID 签名并经 Apple 公证。
 2. 在设置窗口点“打开辅助功能设置…”，在“系统设置 › 隐私与安全性 › 辅助功能”里打开 Initials。顶部显示“✓ 已授权辅助功能，正在工作”即可，不用重启。Initials 只看 ⌘ 和紧跟的字母，不记录、不保存输入。
-3. 点“添加…”给字母指定 app，或“导入配置…”。已开启 iCloud Drive 的同一 Apple ID 会自动沿用已有配置，也可以“从 Hammerspoon 导入”。
+3. 点“添加…”给字母指定 app，或“导入配置…”。选择开启配置同步后，已开启 iCloud Drive 的同一 Apple ID 会沿用已有配置，也可以“从 Hammerspoon 导入”。
 
 ## 配置同步与备份
 
-默认通过 **iCloud Drive** 自动同步两侧字母表、触发方式、隐藏/轮换开关和时间参数。两台 Mac 使用同一 Apple ID、开启 iCloud Drive，并安装 Initials 1.3.0 或更新版本即可；设置里的“通过 iCloud Drive 自动同步配置”可在每台 Mac 单独关闭。配置保存在 iCloud Drive 的 `Initials/config.json`，传输由 macOS 完成；离线仍用本机配置，联网后同步。新机器的空配置不会覆盖云端；两台离线修改不同字母会合并，同一字母同时修改时本机尚未同步的改动优先。
+在设置里选择“通过 iCloud Drive 自动同步配置”，即可跟随系统 Apple ID 记住两侧字母表、触发方式、隐藏/轮换开关和时间参数。新安装默认关闭，由你选择开启；已有同步开关会保留。两台 Mac 使用同一 Apple ID、开启 iCloud Drive，并在 Initials 中选择同步。配置保存在 iCloud Drive 的 `Initials/config.json`，传输由 macOS 完成；离线仍用本机配置，联网后同步。新机器的空配置不会覆盖云端；两台离线修改不同字母会合并，同一字母同时修改时本机尚未同步的改动优先。
 
 手动迁移：旧 Mac 在设置点“导出配置…”，把生成的 `Initials-config.json` 传到新 Mac，在设置点“导入配置…”。导入恢复完整配置，未安装的 App 保留对应字母；按 bundle ID 查找本机应用位置。导入前的配置保存在本机配置目录的 `config-before-import.json`；无效文件不会覆盖现有配置。辅助功能授权、“登录时打开”和暂停状态由每台 Mac 单独管理。
 
@@ -57,7 +57,9 @@ initials sync on
 initials sync now                 # 立即核对本机与 iCloud Drive 文件；云端传输由系统完成
 ```
 
-只同步你选择的 App 和快捷键设置，不记录键盘输入，不使用开发者服务器。iCloud 同步需要 Apple ID 与网络；切换应用本身不需要联网。
+只同步你选择的 App 和快捷键设置，不记录键盘输入。iCloud 同步使用你自己的 Apple ID；切换应用本身不需要联网。
+
+菜单栏和设置都有“检查更新…”：读取官网的实际发行版本，有新版可在窗口内升级。安装包经过 SHA256、App 身份和开发者签名校验，替换失败保留旧版，配置不变。脚本可用 `initials updates --json` 只读检查；断网或发行记录无效会明确报错。
 
 ## 命令行（给脚本与 agent）
 

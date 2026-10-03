@@ -24,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         NSApp.setActivationPolicy(.accessory)
+        AppLifecycleUI.install(name: "Initials", configuration: nil,
+                               updateSource: .manifest(URL(string: "https://initials.tianli.cyou/updates.json")!))
         loadConfig()
         buildStatusItem()
         watchConfig()
@@ -199,6 +201,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let prefs = NSMenuItem(title: T("设置…", "Settings…"), action: #selector(showSettings(_:)), keyEquivalent: ",")
         prefs.target = self
         menu.addItem(prefs)
+        let update = AppLifecycleUI.menuItems()[1]
+        update.title = T("检查更新…", "Check for Updates…")
+        menu.addItem(update)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: T("退出 Initials", "Quit Initials"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
@@ -218,6 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             controller.onRequestTrust = { EventTap.requestTrust() }
             controller.isTapRunning = { [weak self] in self?.tap.isEnabled ?? false }
             controller.onSyncChange = { [weak self] in self?.cloudSync.request() }
+            controller.onCheckForUpdates = { AppLifecycleUI.shared.checkForUpdates() }
             controller.refreshSyncStatus(syncNote)
             settings = controller
         }
@@ -232,6 +238,9 @@ enum MainMenu {
         let main = NSMenu()
         let app = NSMenu(title: "Initials")
         app.addItem(withTitle: T("关于 Initials", "About Initials"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        let update = AppLifecycleUI.menuItems()[1]
+        update.title = T("检查更新…", "Check for Updates…")
+        app.addItem(update)
         app.addItem(.separator())
         app.addItem(withTitle: T("隐藏 Initials", "Hide Initials"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(withTitle: T("退出 Initials", "Quit Initials"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")

@@ -34,6 +34,7 @@ let commandTable: [(String, Command)] = [
                       about: "Does Initials open at login? (Read only; switch it in Settings.)")),
     ("path", Command(usage: "initials path [--json]", about: "Print the config file path.")),
     ("version", Command(usage: "initials version [--json]", about: "Print the version of the Initials.app this command ships in.")),
+    ("updates", Command(usage: "initials updates [--json]", about: "Check the actual release feed for a newer version (read only).")),
     ("set", Command(usage: "initials set <letter> <app> [--side right|left] [--dry-run] [--json]",
                     about: "Pin an app to a letter (app: name, bundle id or /path/To.app).",
                     details: "Left ⌘ has its own letters only after `initials share off`.",
@@ -51,7 +52,7 @@ let commandTable: [(String, Command)] = [
                        details: "JSON replaces both sides, saves config-before-import.json and keeps missing apps. --side is for Lua only.\nWithout a file: ~/.hammerspoon/keymaps.lua; missing Lua apps are skipped. --from and a positional file cannot be combined.",
                        positional: 0...1, options: ["--side", "--from", "--dry-run"])),
     ("sync", Command(usage: "initials sync [status|on|off|now] [--dry-run] [--json]",
-                     about: "Read or control automatic iCloud Drive sync (default status; on by default).",
+                     about: "Read or control optional iCloud Drive sync (default status; opt in with on).",
                      details: "on/off save this Mac's preference; now reconciles local and cloud settings. Transfers are handled by macOS.\n--dry-run is supported only with on/off.", positional: 0...1, options: ["--dry-run"])),
     ("enable", Command(usage: "initials enable [right|left|all] [--dry-run] [--json]",
                        about: "Turn a ⌘ key back on (default all).", positional: 0...1, options: ["--dry-run"])),
@@ -273,6 +274,32 @@ let hostInfo: [String: Any] = hostContents.flatMap {
 // MARK: Commands
 
 switch name {
+case "updates":
+    let version = hostInfo["CFBundleShortVersionString"] as? String ?? "0"
+    let build = hostInfo["CFBundleVersion"] as? String ?? "0"
+    let signal = DispatchSemaphore(value: 0)
+    var response: Result<AppRelease, Error>?
+    if ProcessInfo.processInfo.environment["INITIALS_SUPPORT_DIR"] != nil,
+       let path = ProcessInfo.processInfo.environment["INITIALS_UPDATE_FEED"] {
+        response = Result { try AppUpdateChecker.manifest(Data(contentsOf: URL(fileURLWithPath: path)),
+                                                          at: URL(fileURLWithPath: path), bundleID: "cyou.tianli.initials", channel: "test") }
+        signal.signal()
+    } else {
+        AppUpdateChecker.check(source: .manifest(URL(string: "https://initials.tianli.cyou/updates.json")!),
+                               bundleID: "cyou.tianli.initials", version: version, build: build) { response = $0; signal.signal() }
+    }
+    guard signal.wait(timeout: .now() + 25) == .success, let response else { fail("Update check timed out; current version is unchanged.") }
+    switch response {
+    case .failure(let error): fail(error.localizedDescription)
+    case .success(let release):
+        let available = release.isNewer(than: version, build: build)
+        if json {
+            printJSON(["ok": true, "currentVersion": version, "currentBuild": build,
+                       "version": release.version, "build": release.build, "updateAvailable": available,
+                       "downloadURL": release.downloadURL?.absoluteString as Any? ?? NSNull()])
+        } else { print(available ? "New version \(release.version) (\(release.build)); installed \(version) (\(build))." : "Installed \(version) (\(build)); release \(release.version) (\(release.build)).") }
+    }
+
 case "version":
     let version = hostInfo["CFBundleShortVersionString"] as? String ?? "dev"
     let build = hostInfo["CFBundleVersion"] as? String

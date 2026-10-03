@@ -97,8 +97,19 @@ def main():
         r"SentrySDK|TelemetryClient|Analytics)\b|"
         r"\b(?:socket|connect|sendto|recvfrom|curl|wget)\s*\(")
     sources = sorted((ROOT / "Sources").rglob("*.swift"))
+    # Only the reviewed, immutable shared implementation may check releases or download an update.
+    lifecycle = ROOT / "Sources/Shared/Lifecycle"
+    approved = {
+        "AppLifecycle.swift": "07adaba8327f855b9a497346384ece9f8a526089c1c2f987b8873ab95a4fec3c",
+        "AppConfiguration.swift": "66d1b04072dbcbcbbc556afb79be1181396fc8bd1a6940d5960adea742219edc",
+        "AppLifecycleUI.swift": "c5bfb42bb97555125d3822a98ab0bab71adf368f0de1439f170f0dddb7456974",
+    }
+    for name, digest in approved.items():
+        assert hashlib.sha256((lifecycle / name).read_bytes()).hexdigest() == digest, f"Unreviewed shared update source: {name}"
     findings = []
     for source in sources:
+        if source.parent == lifecycle and source.name in approved:
+            continue
         for line_number, line in enumerate(source.read_text().splitlines(), 1):
             if network_or_clipboard.search(line):
                 findings.append(f"{source.relative_to(ROOT)}:{line_number}")
@@ -121,7 +132,7 @@ def main():
         "PASS: isolated CLI persistence, app simulation, MacKit sentinels, and scoped privacy source checks",
         dynamic_checks=dynamic,
         static_checks=[
-            f"{len(sources)} Swift source files checked for listed network/analytics/clipboard APIs",
+            f"{len(sources) - len(approved)} product Swift sources checked for listed network/analytics/clipboard APIs; three shared update sources match approved SHA256",
             "EventTap and KeyEngine contain no listed raw keyboard text extraction or logging APIs",
             "RuntimeStatus source schema contains only PID, permission/interception/pause flags, version and timestamp",
         ],

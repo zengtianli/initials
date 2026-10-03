@@ -130,7 +130,7 @@ def main():
         before = digest()
         help_forms = [["--help"], ["-h"], ["help"], ["help", "import"]] + [[name, "--help"] for name in (
             "list", "preview", "status", "login", "path", "version", "set", "unset", "move", "import", "enable",
-            "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "hammerspoon", "export", "sync")]
+            "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "hammerspoon", "export", "sync", "updates")]
         help_forms += [["import", "-h"], ["hold", "on", "--help"], ["unset", "x", "--help"], ["enable", "right", "--help"],
                        ["set", "q", str(right_app), "--help"], ["import", "--bogus", "--help"]]
         for args in help_forms:
@@ -138,7 +138,7 @@ def main():
             check("initials" in text and digest() == before, f"`{' '.join(args)}` prints help and changes nothing")
         for args in (["import", "--bogus"], ["hold", "on", "--bogus"], ["share", "on", "--side", "left"],
                      ["list", "--from", "x"], ["path", "--dry-run"], ["login", "on"], ["bogus"], ["preview", "1"],
-                     ["--bogus"], ["pause", "--dry-run"], ["resume", "--dry-run"], ["hammerspoon", "rcmd", "off", "--dry-run"]):
+                     ["--bogus"], ["pause", "--dry-run"], ["resume", "--dry-run"], ["hammerspoon", "rcmd", "off", "--dry-run"], ["updates", "--bogus"], ["updates", "--dry-run"]):
             command(*args, expected=2)
             check(digest() == before, f"`{' '.join(args)}` is rejected (exit 2) without writing")
         for args, which in ((["--json"], None), (["help", "import", "--json"], "import"), (["list", "--help", "--json"], "list"),
