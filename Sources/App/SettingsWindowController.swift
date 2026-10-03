@@ -9,6 +9,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     var onChange: ((Config) -> Void)?
     var onRequestTrust: (() -> Void)?
     var isTapRunning: () -> Bool = { false }
+    var onSyncChange: (() -> Void)?
 
     private(set) var config: Config
     private var side: Side = .right
@@ -28,6 +29,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private let addButton = NSButton()
     private let removeButton = NSButton()
     private let importButton = NSButton()
+    private let exportConfigButton = NSButton()
+    private let importConfigButton = NSButton()
+    private let syncCheck = NSButton(checkboxWithTitle: T("通过 iCloud Drive 自动同步配置", "Sync settings automatically with iCloud Drive"), target: nil, action: nil)
+    private let syncLabel = NSTextField(wrappingLabelWithString: "")
     private let permissionLabel = NSTextField(labelWithString: "")
     private let permissionButton = NSButton()
     private let hammerspoonLabel = NSTextField(wrappingLabelWithString: "")
@@ -114,6 +119,13 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         addButton.keyEquivalentModifierMask = .command
         configure(removeButton, T("移除", "Remove"), #selector(removeBinding))
         configure(importButton, T("从 Hammerspoon 导入", "Import from Hammerspoon"), #selector(importHammerspoon))
+        configure(exportConfigButton, T("导出配置…", "Export Settings…"), #selector(exportConfigFile))
+        configure(importConfigButton, T("导入配置…", "Import Settings…"), #selector(importConfigFile))
+        syncCheck.target = self
+        syncCheck.action = #selector(toggleSync)
+        syncLabel.font = .systemFont(ofSize: 12)
+        syncLabel.textColor = .secondaryLabelColor
+        refreshSyncStatus()
         configure(permissionButton, T("打开辅助功能设置…", "Open Accessibility Settings…"), #selector(openAccessibility))
         configure(hammerspoonButton, "", #selector(toggleHammerspoon))
         permissionLabel.font = .systemFont(ofSize: 13, weight: .medium)
@@ -128,16 +140,18 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         hammerspoonRow.alignment = .centerY
         let buttons = NSStackView(views: [addButton, removeButton, spacer(), importButton])
         let footer = NSStackView(views: [loginCheck, spacer(), message])
+        let transferRow = NSStackView(views: [exportConfigButton, importConfigButton, spacer()])
 
         let stack = NSStackView(views: [permissionRow, hammerspoonRow, separator(), sidePicker, sideNote, holdCheck, tapCheck, shareCheck,
-                                        conflictLabel, tableScroll, buttons, hideCheck, cycleCheck, separator(), footer])
+                                        conflictLabel, tableScroll, buttons, hideCheck, cycleCheck, separator(),
+                                        syncCheck, syncLabel, transferRow, separator(), footer])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
         stack.setCustomSpacing(4, after: sidePicker)
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)
-        for view in [permissionRow, hammerspoonRow, tableScroll, buttons, footer, sideNote, conflictLabel] {
+        for view in [permissionRow, hammerspoonRow, tableScroll, buttons, footer, sideNote, conflictLabel, syncLabel, transferRow] {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
         for view in stack.arrangedSubviews where view is NSBox {
@@ -257,6 +271,74 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     }
 
     // MARK: Actions
+
+    func refreshSyncStatus(_ note: String = "") {
+        syncCheck.state = (try? CloudSyncStore.preferences().enabled) == false ? .off : .on
+        syncLabel.stringValue = note.isEmpty
+            ? T("同一 Apple ID、开启 iCloud Drive 的 Mac 自动沿用字母与开关。导入前会备份本机配置。",
+                "Macs using the same Apple ID and iCloud Drive share letters and options. Imports back up local settings.")
+            : note
+        syncLabel.toolTip = syncLabel.stringValue
+    }
+
+    @objc private func toggleSync() {
+        do {
+            try CloudSyncStore.setEnabled(syncCheck.state == .on)
+            refreshSyncStatus(syncCheck.state == .on
+                ? T("正在连接 iCloud Drive…", "Connecting to iCloud Drive…")
+                : T("iCloud 同步已关闭，保留本机和云端配置", "iCloud sync is off; local and cloud settings are kept"))
+            onSyncChange?()
+        } catch { message.stringValue = error.localizedDescription; refreshSyncStatus() }
+    }
+
+    /// The file panels and offscreen acceptance use these exact same operations.
+    func exportConfiguration(to url: URL) throws {
+        try ConfigTransfer.export(try ConfigStore.load(), to: url)
+        message.stringValue = T("已导出配置", "Settings exported")
+    }
+
+    @discardableResult
+    func importConfiguration(from url: URL) throws -> ConfigTransfer.Imported {
+        let imported = try ConfigTransfer.read(from: url)
+        try ConfigTransfer.apply(imported)
+        config = imported.config
+        onChange?(config)
+        reload()
+        message.stringValue = imported.missing.isEmpty ? T("已导入配置", "Settings imported")
+            : T("已导入；\(imported.missing.count) 个 App 未安装，字母已保留",
+                "Imported; \(imported.missing.count) missing apps kept")
+        message.toolTip = imported.missing.map { "\($0.side.rawValue) \($0.letter.uppercased()) → \($0.name)" }.joined(separator: "\n")
+        return imported
+    }
+
+    @objc private func exportConfigFile() {
+        guard let window else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "Initials-config.json"
+        panel.canCreateDirectories = true
+        panel.prompt = T("导出", "Export")
+        panel.message = T("导出两侧字母、触发方式与选项，可在另一台 Mac 导入。", "Export both letter tables, triggers and options for another Mac.")
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .OK, let url = panel.url else { return }
+            do { try self.exportConfiguration(to: url) } catch { self.message.stringValue = error.localizedDescription }
+        }
+    }
+
+    @objc private func importConfigFile() {
+        guard let window else { return }
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = T("导入", "Import")
+        panel.message = T("恢复完整配置，替换两侧设置；导入前自动备份，未安装的 App 保留字母。",
+                          "Restore both sides, replacing current settings. A backup is saved; missing apps keep their letters.")
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard let self, response == .OK, let url = panel.url else { return }
+            do { try self.importConfiguration(from: url) } catch { self.message.stringValue = error.localizedDescription }
+        }
+    }
 
     @objc private func sideChanged() {
         side = sidePicker.selectedSegment == 0 ? .right : .left
@@ -439,6 +521,27 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         refreshStatus()
         checks["settings_refresh_preserves_right"] = table.numberOfRows == 2 && table.isEnabled && !permissionLabel.stringValue.isEmpty
         checks["settings_right_controls_in_bounds"] = try snapshotSelfTestContent(to: directory.appendingPathComponent("settings-right.png"))
+        checks["settings_transfer_controls"] = exportConfigButton.isEnabled && importConfigButton.isEnabled
+            && exportConfigButton.action == #selector(exportConfigFile) && importConfigButton.action == #selector(importConfigFile)
+        let exported = directory.appendingPathComponent("Initials-config.json")
+        let before = config
+        try exportConfiguration(to: exported)
+        checks["settings_export_complete"] = try ConfigStore.load(from: exported) == before
+        var replacement = before
+        replacement.right.bindings = ["z": Binding(name: "Uninstalled Fixture", bundleID: "test.initials.missing", path: "/absent/Fixture.app")]
+        replacement.left.useRightBindings = true
+        replacement.pickerTimeoutSeconds = 7
+        let source = directory.appendingPathComponent("import.json")
+        try ConfigStore.save(replacement, to: source)
+        let received = try importConfiguration(from: source)
+        let importedDisk = try ConfigStore.load()
+        checks["settings_import_complete"] = config == replacement && importedDisk == replacement
+            && callbackCount == 2 && received.missing.count == 1
+        checks["settings_import_backup"] = try ConfigStore.load(from: ConfigTransfer.backup) == before
+        try Data("{}".utf8).write(to: source)
+        do { try importConfiguration(from: source); checks["settings_import_rejects_unrelated_json"] = false }
+        catch { checks["settings_import_rejects_unrelated_json"] = config == replacement && callbackCount == 2 }
+        checks["settings_sync_control"] = syncCheck.action == #selector(toggleSync) && syncCheck.isEnabled
         close()
         checks["settings_close_without_focus"] = window?.isVisible == false && window?.isKeyWindow == false
             && window?.isMainWindow == false && NSApp.activationPolicy() == .prohibited
@@ -458,7 +561,8 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         content.setFrameSize(content.fittingSize)
         content.layoutSubtreeIfNeeded()
         var controls: [NSView] = [permissionLabel, sidePicker, sideNote, holdCheck, tapCheck,
-                                   tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck]
+                                   tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck,
+                                   syncCheck, syncLabel, exportConfigButton, importConfigButton]
         if !shareCheck.isHidden { controls.append(shareCheck) }
         if !conflictLabel.isHidden { controls.append(conflictLabel) }
         let visible = controls.allSatisfy { control in
@@ -481,7 +585,8 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         view.layoutSubtreeIfNeeded()
         // Fail rather than publish a clipped render: every control must sit inside the content area.
         var controls: [NSView] = [permissionLabel, sidePicker, sideNote, holdCheck, tapCheck,
-                                  tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck]
+                                  tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck,
+                                  syncCheck, syncLabel, exportConfigButton, importConfigButton]
         if !shareCheck.isHidden { controls.append(shareCheck) }
         if !conflictLabel.isHidden { controls.append(conflictLabel) }
         let area = view.convert(window.contentLayoutRect, from: nil).insetBy(dx: -1, dy: -1)

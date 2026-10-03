@@ -13,6 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var trustTimer: Timer?
     private var watcher: DispatchSourceFileSystemObject?
     private let pauseControl = PauseControl()
+    private let cloudSync = CloudSyncController()
+    private var syncNote = ""
     private var paused: Bool { pauseControl.paused }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -25,6 +27,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         loadConfig()
         buildStatusItem()
         watchConfig()
+        cloudSync.onUpdate = { [weak self] note in
+            guard let self else { return }
+            self.syncNote = note
+            self.loadConfig()
+            self.settings?.refreshSyncStatus(note)
+        }
+        cloudSync.start()
         tap.onOutput = { [weak self] in self?.handle($0) }
         tap.onWatchdog = { [weak self] in
             guard let self, self.writeStatus(onlyIfChanged: true) else { return }
@@ -86,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             pending = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 pending = false
+                self?.cloudSync.request()
                 guard let self, let fresh = try? ConfigStore.load(), fresh != self.config else { return }
                 self.config = fresh
                 self.configError = nil
@@ -203,9 +213,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             controller.onChange = { [weak self] fresh in
                 self?.config = fresh
                 self?.applyConfig()
+                self?.cloudSync.request()
             }
             controller.onRequestTrust = { EventTap.requestTrust() }
             controller.isTapRunning = { [weak self] in self?.tap.isEnabled ?? false }
+            controller.onSyncChange = { [weak self] in self?.cloudSync.request() }
+            controller.refreshSyncStatus(syncNote)
             settings = controller
         }
         NSApp.mainMenu = MainMenu.build(target: self, settings: settings!)

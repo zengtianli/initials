@@ -188,5 +188,9 @@
   "源代码": "Source code",
   "无第三方追踪脚本、分析 Cookie 或外部字体。访问日志说明见常见问题。": "No third-party trackers, analytics cookies or external fonts. See the FAQ for access logs.",
   "。": ".",
-  "SHA-256：": "SHA-256:"
+  "SHA-256：": "SHA-256:",
+  "配置默认跟随 iCloud Drive：同一 Apple ID 的 Mac 安装 1.3.0 或更新版本后，自动沿用字母与开关，离线也能使用。也可在设置点“导出配置…”和“导入配置…”手动迁移；导入前自动备份，未安装的 App 保留字母。": "Settings sync with iCloud Drive by default. Macs using the same Apple ID and Initials 1.3.0 or later share letters and options, with local settings available offline. Export Settings… and Import Settings… also support manual migration; imports back up your file and keep missing apps.",
+  "Initials 免费，源码采用 MIT 许可。切换应用无需账号或网络，不记录输入。可选的 iCloud Drive 同步使用你自己的 Apple ID，只同步 App 与快捷键设置，不使用开发者服务器；可在设置中关闭。下载和查看本网站需要联网。": "Initials is free, with MIT-licensed source. App switching works without an account or network and records no input. Optional iCloud Drive sync uses your Apple ID and only shares app choices and shortcut settings, with no developer server. Turn it off in Settings. Downloads and this website require a network.",
+  "换 Mac 后怎样恢复配置": "How do I restore settings on a new Mac?",
+  "两台 Mac 使用同一 Apple ID、开启 iCloud Drive，并安装 1.3.0 或更新版本，配置会自动同步到 iCloud Drive 的 Initials/config.json。同步等待系统传输，切换应用仍用本机配置。也可从旧 Mac 导出配置，在新 Mac 导入；辅助功能授权和登录项需要在新机器单独设置。": "Use the same Apple ID, enable iCloud Drive and install Initials 1.3.0 or later on both Macs. Settings sync through Initials/config.json in iCloud Drive, with transfers handled by macOS; app switching keeps using the local copy. You can also export on the old Mac and import on the new one. Accessibility and Open at Login are configured separately."
 }

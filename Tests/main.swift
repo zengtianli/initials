@@ -307,6 +307,51 @@ do {
 // MARK: Cost per key event inside the tap callback (report only)
 
 do {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("initials-transfer-\(getpid())")
+    try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let source = dir.appendingPathComponent("export.json"), target = dir.appendingPathComponent("config.json")
+    var original = Config()
+    original.left.bindings = ["z": Binding(name: "Hidden left", bundleID: "test.hidden", path: "/old/Hidden.app")]
+    original.right.bindings = ["m": pinMusic]
+    original.right.doubleTap = true
+    original.pickerTimeoutSeconds = 6
+    try! ConfigTransfer.export(original, to: source)
+    check((try! ConfigStore.load(from: source)) == original, "export keeps hidden left table and all options")
+    let imported = try! ConfigTransfer.read(from: source, resolve: { $0.bundleID == "com.apple.Music" ? URL(fileURLWithPath: "/new/Music.app") : nil })
+    check(imported.config.right.bindings["m"]?.path == "/new/Music.app", "import relocates app by resolver")
+    check(imported.config.left.bindings == original.left.bindings && imported.missing.count == 1, "missing apps and hidden left letters survive")
+    try! Data("corrupt prior config".utf8).write(to: target)
+    let backup = try! ConfigTransfer.apply(imported, to: target)
+    check((try! Data(contentsOf: backup!)) == Data("corrupt prior config".utf8), "import backs up corrupt prior bytes for recovery")
+    check((try! ConfigStore.load(from: target)) == imported.config, "import restores readable full config")
+    check((try! ConfigTransfer.apply(imported, to: target)) == nil, "repeated import is idempotent and leaves backup intact")
+    for invalid in ["{}", #"{"version":2,"right":{},"left":{}}"#,
+                    #"{"version":1,"right":{"bindings":{"1":{"name":"bad"}}},"left":{}}"#,
+                    #"{"version":1,"right":{},"left":{},"doubleTapSeconds":0}"#] {
+        try! Data(invalid.utf8).write(to: source)
+        do { _ = try ConfigTransfer.read(from: source); check(false, "invalid import must fail: \(invalid)") }
+        catch { check((try! ConfigStore.load(from: target)) == imported.config, "invalid import cannot mutate current configuration") }
+    }
+    let base = Config()
+    var local = base, cloud = base
+    local.right.bindings["m"] = pinMusic
+    cloud.right.bindings["f"] = Binding(name: "Finder", bundleID: "com.apple.finder")
+    cloud.left.doubleTap = false
+    let merged = CloudSyncStore.merge(base: base, local: local, cloud: cloud)
+    check(Set(merged.right.bindings.keys) == ["f", "m"] && !merged.left.doubleTap, "offline edits to separate letters and options merge")
+    var removed = merged, changed = merged
+    removed.right.bindings["m"] = nil
+    changed.pickerTimeoutSeconds = 12
+    check(CloudSyncStore.merge(base: merged, local: removed, cloud: changed).right.bindings["m"] == nil,
+          "a local deletion survives a separate remote option change")
+    local.right.bindings["m"] = Binding(name: "Local wins")
+    cloud.right.bindings["m"] = Binding(name: "Remote edit")
+    check(CloudSyncStore.merge(base: base, local: local, cloud: cloud).right.bindings["m"]?.name == "Local wins",
+          "pending local edit wins a same-letter conflict")
+}
+
+do {
     var e = KeyEngine()
     let events: [KeyInput] = [
         .keyDown(code: codeM, flags: 0, isRepeat: false, time: 0), .keyUp(code: codeM, flags: 0),

@@ -43,10 +43,16 @@ let commandTable: [(String, Command)] = [
     ("move", Command(usage: "initials move <letter> <new-letter> [--side right|left] [--dry-run] [--json]",
                      about: "Move a pinned app to another letter (replaces what that letter held).",
                      positional: 2...2, options: ["--side", "--dry-run"])),
-    ("import", Command(usage: "initials import [--from keymaps.lua] [--side right|left] [--dry-run] [--json]",
-                       about: "Import Hammerspoon right_command letters (default ~/.hammerspoon/keymaps.lua).",
-                       details: "Imported letters replace existing ones; apps that are not installed are skipped and listed.\nExit 1 when the file is missing or has no right_command letters.",
-                       options: ["--side", "--from", "--dry-run"])),
+    ("export", Command(usage: "initials export <file.json> [--dry-run] [--json]",
+                       about: "Export both letter tables, triggers and options as a portable Initials configuration.",
+                       positional: 1...1, options: ["--dry-run"])),
+    ("import", Command(usage: "initials import [<file.json> | --from file.json|keymaps.lua] [--side right|left] [--dry-run] [--json]",
+                       about: "Restore an Initials configuration, or import Hammerspoon letters when no file is given.",
+                       details: "JSON replaces both sides, saves config-before-import.json and keeps missing apps. --side is for Lua only.\nWithout a file: ~/.hammerspoon/keymaps.lua; missing Lua apps are skipped. --from and a positional file cannot be combined.",
+                       positional: 0...1, options: ["--side", "--from", "--dry-run"])),
+    ("sync", Command(usage: "initials sync [status|on|off|now] [--dry-run] [--json]",
+                     about: "Read or control automatic iCloud Drive sync (default status; on by default).",
+                     details: "on/off save this Mac's preference; now reconciles local and cloud settings. Transfers are handled by macOS.\n--dry-run is supported only with on/off.", positional: 0...1, options: ["--dry-run"])),
     ("enable", Command(usage: "initials enable [right|left|all] [--dry-run] [--json]",
                        about: "Turn a ⌘ key back on (default all).", positional: 0...1, options: ["--dry-run"])),
     ("disable", Command(usage: "initials disable [right|left|all] [--dry-run] [--json]",
@@ -472,6 +478,29 @@ case "move":
                   + (replaced.map { " (replaced \($0.name))" } ?? "")])
 
 case "import":
+    guard rest.isEmpty || values["--from"] == nil else { fail("use a file argument or --from, not both") }
+    let source = rest.first ?? values["--from"]
+    if let source, !rest.isEmpty || (source as NSString).pathExtension.lowercased() != "lua" {
+        guard sideOption == nil else { fail("JSON restores both sides; --side is for Hammerspoon Lua only") }
+        let url = URL(fileURLWithPath: (source as NSString).expandingTildeInPath)
+        guard FileManager.default.fileExists(atPath: url.path) else { fail("import source not found: \(url.path)", code: 1) }
+        do {
+            let imported = try ConfigTransfer.read(from: url)
+            let changed = (try? ConfigStore.load()) != imported.config
+            let backup = dryRun ? nil : try ConfigTransfer.apply(imported)
+            if json {
+                printJSON(["ok": true, "command": name, "from": url.path, "changed": changed, "dryRun": dryRun,
+                           "config": Paths.config.path, "state": sidesJSON(imported.config),
+                           "backup": backup?.path as Any? ?? NSNull(),
+                           "missing": imported.missing.map { ["side": $0.side.rawValue, "letter": $0.letter, "app": $0.name] }])
+            } else {
+                print("\(dryRun ? "would restore" : "restored") Initials settings from \(url.path)")
+                for app in imported.missing { print("  \(app.side.rawValue) \(app.letter.uppercased()) → \(app.name) [not installed, kept]") }
+                if let backup { print("previous configuration: \(backup.path)") }
+            }
+            exit(0)
+        } catch { fail("cannot import \(url.path): \(error.localizedDescription)") }
+    }
     let before = loadConfig()
     var config = before
     guard config.bindingsEditable(side) else { fail(sharedLeftMessage) }
@@ -487,6 +516,36 @@ case "import":
            text: imported.bindings.keys.sorted().map { "  \($0.uppercased())  \(imported.bindings[$0]!.name)" }
                + imported.unresolved.map { "  \($0.letter.uppercased())  \($0.app)  [not installed, skipped]" }
                + ["\(dryRun ? "would import" : "imported") \(imported.bindings.count) letters into \(side.rawValue)"])
+
+case "export":
+    let config = loadConfig()
+    let url = URL(fileURLWithPath: (rest[0] as NSString).expandingTildeInPath)
+    if !dryRun {
+        do { try ConfigTransfer.export(config, to: url) } catch { fail("cannot export: \(error.localizedDescription)") }
+    }
+    if json { printJSON(["ok": true, "command": name, "file": url.path, "dryRun": dryRun,
+                         "rightLetters": config.right.bindings.count, "leftLetters": config.left.bindings.count]) }
+    else { print("\(dryRun ? "would export" : "exported") Initials settings: \(url.path)") }
+
+case "sync":
+    let action = rest.first ?? "status"
+    guard ["status", "on", "off", "now"].contains(action) else { fail("usage: \(spec.usage)") }
+    guard !dryRun || ["on", "off"].contains(action) else { fail("--dry-run is for sync on/off only") }
+    do {
+        var enabled = try CloudSyncStore.preferences().enabled
+        if action == "on" || action == "off" {
+            enabled = action == "on"
+            if !dryRun { try CloudSyncStore.setEnabled(enabled) }
+        }
+        let note = action == "now" ? try CloudSyncStore.sync() : enabled
+            ? CloudSyncStore.directory == nil ? "waiting for iCloud Drive" : "automatic sync enabled"
+            : "sync off (local and cloud settings kept)"
+        let uploaded = CloudSyncStore.file.flatMap { try? $0.resourceValues(forKeys: [.ubiquitousItemIsUploadedKey]).ubiquitousItemIsUploaded }
+        if json { printJSON(["ok": true, "command": name, "enabled": enabled, "available": CloudSyncStore.directory != nil,
+                             "file": CloudSyncStore.file?.path as Any? ?? NSNull(), "uploaded": uploaded as Any? ?? NSNull(),
+                             "message": note, "dryRun": dryRun]) }
+        else { print(note); if let file = CloudSyncStore.file { print("iCloud: \(file.path)") } }
+    } catch { fail("iCloud sync: \(error.localizedDescription)") }
 
 case "enable", "disable":
     let on = name == "enable"

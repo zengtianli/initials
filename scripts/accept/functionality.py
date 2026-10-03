@@ -8,6 +8,7 @@ import subprocess
 import time
 
 from _common import detail, ensure_build, isolated, run
+from config_sync import exercise as exercise_config_sync
 
 
 def main():
@@ -129,7 +130,7 @@ def main():
         before = digest()
         help_forms = [["--help"], ["-h"], ["help"], ["help", "import"]] + [[name, "--help"] for name in (
             "list", "preview", "status", "login", "path", "version", "set", "unset", "move", "import", "enable",
-            "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "hammerspoon")]
+            "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "hammerspoon", "export", "sync")]
         help_forms += [["import", "-h"], ["hold", "on", "--help"], ["unset", "x", "--help"], ["enable", "right", "--help"],
                        ["set", "q", str(right_app), "--help"], ["import", "--bogus", "--help"]]
         for args in help_forms:
@@ -220,6 +221,7 @@ def main():
         login = as_json("login")
         check(isinstance(login["openAtLogin"], bool) and login["status"] in
               {"enabled", "notRegistered", "requiresApproval", "notFound"}, "login reports the login-item status read only")
+        exercise_config_sync(cli, root, env, check)
 
         # Runtime control through the real PauseControl in an isolated, never-active app process.
         status_path = root / "support/status.json"

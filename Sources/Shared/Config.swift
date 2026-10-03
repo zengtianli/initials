@@ -192,7 +192,8 @@ enum Paths {
 enum ConfigStore {
     /// Missing file → defaults. A corrupt file is reported, never silently replaced.
     static func load(from url: URL = Paths.config) throws -> Config {
-        guard let data = try? Data(contentsOf: url) else { return Config() }
+        guard FileManager.default.fileExists(atPath: url.path) else { return Config() }
+        let data = try Data(contentsOf: url)
         return try JSONDecoder().decode(Config.self, from: data)
     }
 

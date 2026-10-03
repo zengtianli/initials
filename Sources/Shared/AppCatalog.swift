@@ -65,4 +65,15 @@ enum AppCatalog {
         if let id = binding.bundleID, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) { return url }
         return resolve(binding.name).flatMap { $0.path.map { URL(fileURLWithPath: $0) } }
     }
+
+    /// A different Mac may have a different username or app location. On import,
+    /// use the stable bundle ID first; never replace a missing app with a namesake.
+    static func migrationURL(for binding: Binding) -> URL? {
+        if let id = binding.bundleID, !id.isEmpty {
+            if let path = binding.path, let local = self.binding(for: URL(fileURLWithPath: path)),
+               local.bundleID == id { return URL(fileURLWithPath: path) }
+            return NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
+        }
+        return url(for: binding)
+    }
 }

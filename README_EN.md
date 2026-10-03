@@ -11,11 +11,11 @@ Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap 
 
 | Download | Idle memory | Idle CPU | Start to letter-panel offscreen render completed (including PNG export) |
 |---|---|---|---|
-| **1.6 MB** (installed 2.1 MB) | **16.8 MB** | **0%** | **150 ms** |
+| **2.0 MB** (installed 2.5 MB) | **14.7 MB** | **0.02%** | **118 ms** |
 
 Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.
 
-<sub>v1.1.2 (4) · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-09-29. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.3.0 (7) · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-10-04. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## How it works
@@ -37,7 +37,25 @@ macOS 14+, Apple Silicon.
 
 1. Open the DMG, drag Initials to Applications and open it. Signed with Developer ID and notarized by Apple.
 2. Click "Open Accessibility Settings…" and switch Initials on under System Settings › Privacy & Security › Accessibility. The top of Settings then reads "✓ Accessibility granted — active"; no restart needed. Initials only looks at ⌘ and the letter that follows; it records nothing.
-3. Click "Add…" to pin apps to letters, or "Import from Hammerspoon".
+3. Click "Add…" to pin apps, or "Import Settings…". Macs using the same Apple ID with iCloud Drive enabled automatically share existing settings. Hammerspoon import is also available.
+
+## Settings sync and backup
+
+**iCloud Drive** sync is on by default for both letter tables, triggers, hide/cycle options and timing settings. Use the same Apple ID, enable iCloud Drive and install Initials 1.3.0 or later on each Mac. Turn it off per Mac with "Sync settings automatically with iCloud Drive" in Settings. The file is `Initials/config.json` in iCloud Drive; macOS handles transfers. Local settings work offline and sync when online. An empty new Mac never overwrites cloud settings. Independent offline letter edits merge; a pending local edit wins a conflict on the same letter.
+
+For manual migration, click "Export Settings…" on the old Mac, transfer `Initials-config.json`, then click "Import Settings…" on the new Mac. Import restores the whole configuration, keeps missing apps' letters and finds local apps by bundle ID. The previous local file is kept as `config-before-import.json` beside the active config. Invalid imports leave settings untouched. Accessibility permission, Open at Login and pause state remain separate on each Mac.
+
+```bash
+initials export ~/Initials-config.json
+initials import ~/Initials-config.json --dry-run --json
+initials import ~/Initials-config.json
+initials sync status --json
+initials sync off                 # Off on this Mac; both files are kept
+initials sync on
+initials sync now                 # Reconcile files now; macOS handles cloud transfer
+```
+
+Only app choices and shortcut settings are synced. No typed input is recorded and no developer server is used. Sync requires an Apple ID and network; app switching works offline.
 
 ## Command line (for scripts and agents)
 
@@ -62,6 +80,8 @@ initials set m Music             # name, bundle id or /path/To.app
 initials set w WeChat --side left  # left-only letter (after `initials share off`)
 initials unset m
 initials move m k                # move M's app to K (replaces K's app and says so)
+initials export file.json        # export the complete configuration (also takes --dry-run)
+initials import file.json        # restore and back up; keep missing apps
 initials import [--from keymaps.lua]  # Hammerspoon right_command; apps not installed are skipped and listed
 initials hold on|off [--side right|left]        # hold that ⌘ + letter
 initials tap on|off [--side right|left]         # double-tap that ⌘ for the panel

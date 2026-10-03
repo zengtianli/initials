@@ -27,6 +27,7 @@ enum UISelfTest {
             ]
             let settings = SettingsWindowController(config: config)
             var checks = try settings.checkOffscreenInteractions(to: directory)
+            try checkCloudNotifications(to: directory, checks: &checks)
 
             let panel = PickerPanel()
             let entries = (0..<14).map { index in
@@ -64,5 +65,45 @@ enum UISelfTest {
     private static func text(in view: NSView) -> [String] {
         (view as? NSTextField).map { [$0.stringValue] } ?? []
             + view.subviews.flatMap { text(in: $0) }
+    }
+
+    private static func checkCloudNotifications(to directory: URL, checks: inout [String: Bool]) throws {
+        let cloud = directory.appendingPathComponent("fixture-cloud", isDirectory: true)
+        setenv("INITIALS_ICLOUD_DIR", cloud.path, 1)
+        defer { unsetenv("INITIALS_ICLOUD_DIR") }
+        let controller = CloudSyncController()
+        var updates = 0
+        controller.onUpdate = { _ in updates += 1 }
+        func waitFor(_ predicate: () -> Bool) -> Bool {
+            let deadline = Date().addingTimeInterval(8)
+            while !predicate() && Date() < deadline {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.02))
+            }
+            return predicate()
+        }
+        controller.start()
+        checks["icloud_background_initial_sync"] = waitFor { updates > 0 && FileManager.default.fileExists(atPath: cloud.appendingPathComponent("config.json").path) }
+        var remote = try ConfigStore.load()
+        remote.pickerTimeoutSeconds = 9
+        let cloudURL = cloud.appendingPathComponent("config.json")
+        let beforeUpdates = updates
+        var coordinationError: NSError?
+        var writeError: Error?
+        NSFileCoordinator().coordinate(writingItemAt: cloudURL, options: [], error: &coordinationError) { url in
+            do { try ConfigStore.save(remote, to: url) } catch { writeError = error }
+        }
+        if let coordinationError { throw coordinationError }
+        if let writeError { throw writeError }
+        checks["icloud_remote_notification_applies_without_polling"] = waitFor {
+            updates > beforeUpdates && (try? ConfigStore.load().pickerTimeoutSeconds) == 9
+        }
+        let written = try Data(contentsOf: cloudURL)
+        try CloudSyncStore.setEnabled(false)
+        controller.request()
+        let offUpdates = updates
+        checks["icloud_disable_keeps_files"] = waitFor { updates > offUpdates }
+            && FileManager.default.fileExists(atPath: Paths.config.path)
+        let after = try Data(contentsOf: cloudURL)
+        checks["icloud_disable_preserves_cloud"] = written == after
     }
 }

@@ -1,0 +1,18 @@
+{
+  "version": "1.2.0 (6)",
+  "samples_ms": [
+    337.51199999824166,
+    456.70441596303135,
+    280.76862497255206,
+    299.82474993448704,
+    323.65624990779907,
+    307.414915994741,
+    276.4601659728214
+  ],
+  "median_ms": 307.4,
+  "runs": 7,
+  "binary_sha256": "a7ac1979591782757352b772bfa236f8062a60e6ef541a08502aad2c5fd03edf",
+  "method": "installed release --snapshot <png> --picker --right with isolated INITIALS_SUPPORT_DIR (copy of user config); production picker entries/fill/layout and Retina PNG export; 1 warmup + 7 runs; no event tap",
+  "load": "负载均值 4.15 21.52 24.19；total = 8192.00M  used = 7276.38M  free = 915.62M",
+  "measured_at": "2026-10-03"
+}

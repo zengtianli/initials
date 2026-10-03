@@ -13,11 +13,11 @@
 
 | 安装包 | 空闲内存 | 空闲 CPU | 启动到字母面板离屏渲染完成（含 PNG 导出） |
 |---|---|---|---|
-| **1.6 MB**（装好后 2.1 MB） | **16.8 MB** | **0%** | **150 ms** |
+| **2.0 MB**（装好后 2.5 MB） | **14.7 MB** | **0.02%** | **118 ms** |
 
 纯 AppKit，零第三方依赖；按键由系统事件回调送达，回调里只做几次比较，切换动作放到回调外执行；配置改动由 kqueue 通知、不轮询，仅每 30 秒确认一次按键监听仍开着。
 
-<sub>v1.1.2 (4) · Mac16,12 / Apple M4 / macOS 27.2 · 2026-09-29。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
+<sub>v1.3.0 (7) · Mac16,12 / Apple M4 / macOS 27.2 · 2026-10-04。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
 <!-- lightweight:end -->
 
 ## 用法
@@ -39,7 +39,25 @@
 
 1. 打开 DMG，把 Initials 拖到“应用程序”，从“应用程序”打开。安装包使用 Developer ID 签名并经 Apple 公证。
 2. 在设置窗口点“打开辅助功能设置…”，在“系统设置 › 隐私与安全性 › 辅助功能”里打开 Initials。顶部显示“✓ 已授权辅助功能，正在工作”即可，不用重启。Initials 只看 ⌘ 和紧跟的字母，不记录、不保存输入。
-3. 点“添加…”给字母指定 app，或“从 Hammerspoon 导入”。
+3. 点“添加…”给字母指定 app，或“导入配置…”。已开启 iCloud Drive 的同一 Apple ID 会自动沿用已有配置，也可以“从 Hammerspoon 导入”。
+
+## 配置同步与备份
+
+默认通过 **iCloud Drive** 自动同步两侧字母表、触发方式、隐藏/轮换开关和时间参数。两台 Mac 使用同一 Apple ID、开启 iCloud Drive，并安装 Initials 1.3.0 或更新版本即可；设置里的“通过 iCloud Drive 自动同步配置”可在每台 Mac 单独关闭。配置保存在 iCloud Drive 的 `Initials/config.json`，传输由 macOS 完成；离线仍用本机配置，联网后同步。新机器的空配置不会覆盖云端；两台离线修改不同字母会合并，同一字母同时修改时本机尚未同步的改动优先。
+
+手动迁移：旧 Mac 在设置点“导出配置…”，把生成的 `Initials-config.json` 传到新 Mac，在设置点“导入配置…”。导入恢复完整配置，未安装的 App 保留对应字母；按 bundle ID 查找本机应用位置。导入前的配置保存在本机配置目录的 `config-before-import.json`；无效文件不会覆盖现有配置。辅助功能授权、“登录时打开”和暂停状态由每台 Mac 单独管理。
+
+```bash
+initials export ~/Initials-config.json
+initials import ~/Initials-config.json --dry-run --json
+initials import ~/Initials-config.json
+initials sync status --json
+initials sync off                 # 本机关闭同步，保留两边的配置
+initials sync on
+initials sync now                 # 立即核对本机与 iCloud Drive 文件；云端传输由系统完成
+```
+
+只同步你选择的 App 和快捷键设置，不记录键盘输入，不使用开发者服务器。iCloud 同步需要 Apple ID 与网络；切换应用本身不需要联网。
 
 ## 命令行（给脚本与 agent）
 
@@ -64,6 +82,8 @@ initials set m Music             # 名字、bundle id 或 /路径/To.app
 initials set w WeChat --side left  # 左边单独设（先 initials share off）
 initials unset m
 initials move m k                # 把 M 的 app 移到 K（覆盖 K 原有的 app，并在结果里注明）
+initials export 文件.json        # 导出完整配置（也支持 --dry-run）
+initials import 文件.json        # 导入完整配置并备份；没装的 app 保留
 initials import [--from keymaps.lua]  # 导入 Hammerspoon right_command，没装的 app 跳过并列出
 initials hold on|off [--side right|left]        # 按住该 ⌘ + 字母
 initials tap on|off [--side right|left]         # 双击该 ⌘ 弹面板
