@@ -200,7 +200,15 @@ def main():
     if facts["version"] != release["version"]:
         raise SystemExit(f"facts.json version {facts['version']} (project.yaml sop.release) != release {release['version']}")
     if reuse:
-        # The fixed schema has no field for it: version is the release, numbers are v{measured}'s.
+        # Keep current artifact sizes separate from the explicitly labelled old runtime measurements.
+        bundle = ROOT / "build/Initials.app"
+        facts.update(download_bytes=release["size_bytes"],
+                     installed_bytes=sum(p.stat().st_size for p in bundle.rglob("*") if p.is_file()),
+                     measured_version=raw_perf["version"], historical_reference=True,
+                     download_source="release.json", installed_source="notarized bundle file lengths")
+        facts["card_line"] = (f"当前下载 {release['size_bytes'] / 1_000_000:.1f} MB · 历史实测 "
+                              f"{escape(raw_perf['version'])}（{escape(raw_perf['measured_at'])}）：" + facts["card_line"])
+        facts["card_text"] = product_facts.card_text(facts["card_line"])
         print(f"warning: facts.json v{release['version']} carries historical v{raw_perf['version']} measurements "
               f"(reviewed reuse); measured_at={facts['measured_at']}", file=sys.stderr)
     product_facts.write(out, facts)
