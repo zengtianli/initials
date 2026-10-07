@@ -4,11 +4,13 @@ import hashlib
 import json
 import os
 import plistlib
+import re
 import subprocess
 import time
 
 from _common import detail, ensure_build, isolated, run
 from config_sync import exercise as exercise_config_sync
+from update_command import exercise as exercise_update_command
 
 
 def main():
@@ -130,22 +132,63 @@ def main():
         before = digest()
         help_forms = [["--help"], ["-h"], ["help"], ["help", "import"]] + [[name, "--help"] for name in (
             "list", "preview", "status", "login", "path", "version", "set", "unset", "move", "import", "enable",
-            "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "hammerspoon", "export", "sync", "updates")]
+            "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "quit", "hammerspoon", "export", "sync", "updates",
+            "update")]
         help_forms += [["import", "-h"], ["hold", "on", "--help"], ["unset", "x", "--help"], ["enable", "right", "--help"],
-                       ["set", "q", str(right_app), "--help"], ["import", "--bogus", "--help"]]
+                       ["set", "q", str(right_app), "--help"], ["import", "--bogus", "--help"],
+                       ["update", "install", "--help"], ["update", "install", "--yes", "--help"]]
         for args in help_forms:
             text = command(*args).stdout
             check("initials" in text and digest() == before, f"`{' '.join(args)}` prints help and changes nothing")
         for args in (["import", "--bogus"], ["hold", "on", "--bogus"], ["share", "on", "--side", "left"],
-                     ["list", "--from", "x"], ["path", "--dry-run"], ["login", "on"], ["bogus"], ["preview", "1"],
-                     ["--bogus"], ["pause", "--dry-run"], ["resume", "--dry-run"], ["hammerspoon", "rcmd", "off", "--dry-run"], ["updates", "--bogus"], ["updates", "--dry-run"]):
+                     ["list", "--from", "x"], ["path", "--dry-run"], ["login", "maybe"], ["login", "--dry-run"],
+                     ["login", "on", "off"], ["quit", "now"], ["quit", "--side", "left"], ["bogus"], ["preview", "1"],
+                     ["--bogus"], ["pause", "--dry-run"], ["resume", "--dry-run"], ["hammerspoon", "rcmd", "off", "--dry-run"], ["updates", "--bogus"], ["updates", "--dry-run"],
+                     ["update"], ["update", "now"], ["update", "install", "--bogus"], ["update", "check", "--side", "left"]):
             command(*args, expected=2)
             check(digest() == before, f"`{' '.join(args)}` is rejected (exit 2) without writing")
         for args, which in ((["--json"], None), (["help", "import", "--json"], "import"), (["list", "--help", "--json"], "list"),
-                            (["pause", "-h", "--json"], "pause")):
+                            (["pause", "-h", "--json"], "pause"), (["update", "--help", "--json"], "update")):
             out = json.loads(command(*args).stdout)
             check(out["ok"] is True and out["command"] == which and "initials" in out["help"] and digest() == before,
                   f"`{' '.join(args)}` answers help as one JSON object and changes nothing")
+
+        # The top-level help is the agent's map: read and write commands, the JSON shape, exit codes, window-only items.
+        top = command("--help").stdout
+        listed = set(re.findall(r"(?m)^  initials ([a-z-]+)", top))
+        every = {"list", "preview", "status", "login", "path", "version", "updates", "update", "set", "unset", "move", "export",
+                 "import", "sync", "enable", "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "quit",
+                 "hammerspoon"}
+        check(listed == every, "the top-level help lists every command at the start of a line, and nothing that does not exist")
+        for name in sorted(every):
+            command(name, "--help")
+        read_part, write_part = top.split("\nWrite config.json", 1)
+        check(all(f"  initials {name} " in read_part for name in ("status", "list", "preview", "login", "sync", "updates", "path", "version"))
+              and all(f"  initials {name} " in write_part for name in ("set", "unset", "move", "import", "hold", "share", "pause",
+                                                                         "resume", "quit", "export", "hammerspoon"))
+              and "initials login on|off" in write_part and "initials sync on|off|now" in write_part
+              and not any(f"  initials {name} " in read_part for name in ("set", "quit", "pause", "export")),
+              "the top-level help separates read commands from write commands")
+        elsewhere = top.split("\nWrite elsewhere", 1)[1].split("\n\n", 1)[0]
+        check("  initials update check [--json]\n" in read_part and "  initials update install" not in read_part
+              and "  initials update install --yes [--dry-run] [--json]" in elsewhere and "  initials update check" not in elsewhere,
+              "update check is listed with the read commands and update install --yes with the commands that write elsewhere")
+        check('{"ok": true' in top and '{"ok": false, "error"' in top and '"exitCode"' in top and "--json" in top,
+              "the top-level help states the --json shape for success and failure")
+        check('"error": {"code", "message"}' in top and "`initials update --help`" in top,
+              "the top-level help states the other --json form `update check|install` answer in")
+        update_help = command("update", "--help").stdout
+        check(all(code in update_help for code in ("check_incomplete", "manual_install", "needs_product_installer", "upgrade_failed",
+                                                   "app_busy", "replace_failed", "cleanup_failed", "isolated_run",
+                                                   "confirmation_required", "usage"))
+              and all(field in update_help for field in ("would_install", "old_app_cleanup", "update_available", "ahead_of_channel")),
+              "`update --help` lists the fields and every error.code of check and install")
+        check("Exit codes:" in top and all(f"\n            {code} " in top or f"Exit codes: {code} " in top for code in "01234"),
+              "the top-level help has the exit code table 0–4")
+        window_only = top.split("Window only", 1)[1]
+        check(all(word in window_only for word in ("Settings window", "About", "Accessibility", "right ⌘ and left ⌘",
+                                                    "Edit and Window menus", "key presses")) and "No command yet" not in top,
+              "the top-level help lists what stays in the window, and no longer names a control without a command")
 
         listing = as_json("list")
         right, left = listing["right"], listing["left"]
@@ -221,7 +264,27 @@ def main():
         login = as_json("login")
         check(isinstance(login["openAtLogin"], bool) and login["status"] in
               {"enabled", "notRegistered", "requiresApproval", "notFound"}, "login reports the login-item status read only")
+        check(set(login) == {"ok", "openAtLogin", "status"}, "the login read keeps its three fields")
+        # Switching it is the installed app's business: here only the dry run and the refusal can run.
+        flip = not login["openAtLogin"]
+        out = as_json("login", "on" if flip else "off", "--dry-run")
+        check(out["command"] == "login" and out["dryRun"] and out["changed"] and out["openAtLogin"] is flip
+              and as_json("login")["openAtLogin"] is login["openAtLogin"], "login on|off --dry-run reports the change and makes none")
+        out = as_json("login", "off" if flip else "on")
+        check(out["changed"] is False and out["dryRun"] is False and out["openAtLogin"] is login["openAtLogin"],
+              "asking for the state it already has changes nothing")
+        out = as_json("login", "on" if flip else "off", expected=2)
+        check("isolated" in out["error"] and as_json("login")["openAtLogin"] is login["openAtLogin"],
+              "an isolated run refuses to change the login item (exit 2)")
+        refused = subprocess.run([str(gui), "--login-item-set", "on" if flip else "off"], env=env, text=True,
+                                 capture_output=True, timeout=10)
+        check(refused.returncode == 1 and "isolated" in refused.stderr and refused.stdout == ""
+              and as_json("login")["openAtLogin"] is login["openAtLogin"],
+              "the app binary itself refuses --login-item-set in an isolated run")
+        check(subprocess.run([str(gui), "--login-item-set"], env=env, capture_output=True, timeout=10).returncode == 2,
+              "--login-item-set without on|off is a usage error")
         exercise_config_sync(cli, root, env, check)
+        exercise_update_command(cli, root, env, check)
 
         # Runtime control through the real PauseControl in an isolated, never-active app process.
         status_path = root / "support/status.json"
@@ -274,11 +337,42 @@ def main():
         check(as_json("status", expected=3)["running"] is False, "a live pid that is not Initials does not count as running")
         status_path.unlink()
 
+        # Quit goes through the same channel; the isolated control process stands in for the app.
+        out = as_json("quit", expected=3)
+        check(out["exitCode"] == 3, "quit without the app is exit 3")
+        as_json("quit", "--dry-run", expected=3)
+        control = subprocess.Popen([str(gui), "--control-self-test", "30"], env=env,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            for _ in range(100):
+                if status_path.exists():
+                    break
+                time.sleep(0.05)
+            out = as_json("quit", "--dry-run")
+            check(out["running"] and out["changed"] is False and out["dryRun"] and out["pid"] == control.pid
+                  and control.poll() is None and as_json("status")["pid"] == control.pid, "quit --dry-run leaves the app running")
+            out = as_json("quit")
+            check(out["running"] is False and out["changed"] and out["pid"] == control.pid, "quit is confirmed once the app is gone")
+            check(control.wait(timeout=5) == 0 and not status_path.exists(), "the app quit by itself and removed its status file")
+            check(as_json("status", expected=3)["running"] is False, "status reads back that it is not running")
+        finally:
+            if control.poll() is None:
+                control.terminate()
+                control.wait(timeout=10)
+
     detail("functionality", f"PASS: {len(checks)} CLI and dry-run assertions using isolated fixture apps.",
            assertions=checks, method="real_product",
-           scope="CLI config, help/option contract, JSON output, preview, login status read, pause/resume via the "
+           scope="CLI config, help/option contract (read/write groups, JSON shape, exit codes, window-only items), JSON output, "
+                 "preview, login status read and the login on|off dry run and isolated refusal, update check and update install "
+                 "(usage, missing --yes, dry run, nothing newer, a refused package and one real replacement of an app copy inside "
+                 "the test folder, from a local test channel), pause/resume/quit via the "
                  "isolated control self-test, the one-copy-per-support-folder guard, and safe app dispatch",
-           limitations="No synthetic keys, app activation, hiding, or global event interception; physical hotkeys require user acceptance.")
+           limitations="No synthetic keys, app activation, hiding, or global event interception; physical hotkeys require user acceptance. "
+                       "login on|off is not run for real: registering a login item changes this Mac, so only its dry run, "
+                       "its no-op and its refusal in an isolated run are exercised. update install is not run against the "
+                       "installed Initials, the website release or a running app: the download over HTTPS, the Gatekeeper "
+                       "assessment of a downloaded package, quitting and reopening a running Initials and the move to the "
+                       "owner's Trash are the shared installer's paths and are not exercised here.")
 
 
 if __name__ == "__main__":

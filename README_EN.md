@@ -9,13 +9,13 @@ Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap 
 <!-- lightweight:start -->
 ## Resource use
 
-| Download | Idle memory | Idle CPU | Start to letter-panel offscreen render completed (including PNG export) |
+| Download | Idle memory | Idle CPU | Speed |
 |---|---|---|---|
-| **2.0 MB** (installed 2.5 MB) | **14.7 MB** | **0.02%** | **118 ms** |
+| **2.3 MB** (installed 3.2 MB) | **16.8 MB** | **0%** | **151 ms** |
 
 Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.
 
-<sub>v1.3.0 (7) · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-10-04. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.3.1 (10) · Mac16,12 / Apple M4 / macOS 27.2 · Runtime numbers (idle, ready cold launch, letter panel) were measured on the local acceptance build 1.3.1 (10) installed on this Mac, whose build receipt matches the current source; the download size is the DMG of the public package 1.3.1 (8). · measured 2026-10-07. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## How it works
@@ -57,7 +57,7 @@ initials sync now                 # Reconcile files now; macOS handles cloud tra
 
 Only app choices and shortcut settings are synced. No typed input is recorded. iCloud uses your own Apple ID; app switching works offline.
 
-"Check for Updates…" is available in the menu bar and Settings. It reads the actual release version from the product website and offers an in-app upgrade. The installer verifies SHA256, app identity and developer signature, keeps a rollback copy and preserves settings. `initials updates --json` checks without installing; a failed request is reported as a failure.
+"Check for Updates…" is available in the menu bar and Settings. It reads the actual release version from the product website and offers an in-app upgrade. The installer verifies SHA256, app identity and developer signature, keeps a rollback copy and preserves settings. `initials updates --json` checks without installing; a failed request is reported as a failure. When there is a newer release, `initials update install --yes` takes the same path as the window's "Upgrade to the new version…" (add `--dry-run` first to see what it would do).
 
 ## Command line (for scripts and agents)
 
@@ -73,7 +73,7 @@ The window is for people; `initials` is for scripts and agents. Both run the sam
 initials list [--side right|left] [--json]   # triggers, options, shortcut warnings and letters (whether each app is found, and where)
 initials preview [letter…] [--side right|left] [--json]  # what each letter would do now (open/activate/hide/nothing), without doing it
 initials status [--json]         # running, Accessibility, intercepting, paused, active
-initials login [--json]          # does Initials open at login (read only)
+initials login [--json]          # does Initials open at login (read only without on|off)
 initials path [--json]           # config and status file locations
 initials version [--json]        # version of the Initials.app it ships in
 
@@ -94,7 +94,13 @@ initials enable|disable [right|left|all]  # saved; survives restarts
 
 # The running app and an outside module (take --json; they do not edit the Initials config and take no --dry-run)
 initials pause | resume          # the menu-bar Pause/Resume; lasts until the app restarts; check `status` first
+initials quit [--dry-run]        # the menu-bar Quit; start again with: open -g -j -a Initials --args --background
+initials login on|off [--dry-run]  # the Settings checkbox "Open Initials at login"; the app registers itself, the result is what macOS reports
 initials hammerspoon rcmd on|off # only with an older MacKit that still has its rcmd module
+
+# Updates (the same check and installer as the Settings and Updates window; with --json a failure is {"ok": false, "command", "error": {"code", "message"}}, see initials update --help)
+initials update check            # read only: current version, latest release on the website, whether it is newer, how to upgrade
+initials update install --yes [--dry-run]  # the window's "Upgrade to the new version…": verifies SHA256, app identity and developer signature, then replaces the Initials.app it ships in; a running copy quits first and reopens, the old copy goes to the Trash; with no newer release it does nothing and exits 0
 ```
 
 Typical agent use:
@@ -106,7 +112,7 @@ initials preview m s --json | jq '.letters[] | {letter, action, target}'
 initials pause --json && initials status --json | jq '{paused, intercepting, active}'
 ```
 
-Exit codes: 0 ok; 1 not found (letter, app, an import file that is missing or has no right_command letters, rcmd module); 2 usage error or cannot read/write (including editing left ⌘ while it uses the right ⌘ letters); 3 Initials not running (status, pause, resume); 4 the running app did not confirm (pause, resume; app versions older than this feature). `status` reads the app's `status.json` and checks that the process really is Initials. The app writes it at launch, when Accessibility is granted and on every pause/resume; a revoked permission or a dead tap is written by the existing 30-second watchdog, only when the state changed and without a timer of its own, so such a change shows up within 30 seconds.
+Exit codes: 0 ok; 1 not found (letter, app, an import file that is missing or has no right_command letters, rcmd module); 2 usage error or cannot read/write (including editing left ⌘ while it uses the right ⌘ letters); 3 Initials not running (status, pause, resume, quit); 4 the running app did not confirm (pause, resume, quit; app versions older than this feature). `initials --help` lists the read and write commands, the `--json` shape, the exit code table and what stays in the window. `status` reads the app's `status.json` and checks that the process really is Initials. The app writes it at launch, when Accessibility is granted and on every pause/resume; a revoked permission or a dead tap is written by the existing 30-second watchdog, only when the state changed and without a timer of its own, so such a change shows up within 30 seconds.
 
 Coverage: every Settings switch, adding, changing, moving, removing and importing letters, the menu-bar Pause/Resume and state, and the letter panel's content (`preview`) all have commands. GUI only: the app chooser and icons, window keys such as ⌘1/⌘2, requesting Accessibility (only the app itself can ask, and you switch it on in System Settings), changing "Open at login" (macOS requires the app to register itself; the CLI only reads it), and quitting. The key switch itself is not a command either: really switching would take focus; use `preview` to see what a letter would do and `open -a` to switch to an app.
 

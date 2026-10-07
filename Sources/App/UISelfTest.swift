@@ -28,7 +28,7 @@ enum UISelfTest {
             let settings = SettingsWindowController(config: config)
             var checks = try settings.checkOffscreenInteractions(to: directory)
             AppLifecycleUI.install(name: "Initials", configuration: nil,
-                                   updateSource: .manifest(URL(string: "https://initials.tianli.cyou/updates.json")!))
+                                   updateSource: .manifest(InitialsUpdates.feed))
             checks.merge(try AppLifecycleUI.shared.offscreenSnapshot(to: directory.appendingPathComponent("updates.png"))) { _, value in value }
             try checkCloudNotifications(to: directory, checks: &checks)
 

@@ -11,13 +11,13 @@
 <!-- lightweight:start -->
 ## 资源占用
 
-| 安装包 | 空闲内存 | 空闲 CPU | 启动到字母面板离屏渲染完成（含 PNG 导出） |
+| 安装包 | 空闲内存 | 空闲 CPU | 冷启动到首屏就绪 |
 |---|---|---|---|
-| **2.0 MB**（装好后 2.5 MB） | **14.7 MB** | **0.02%** | **118 ms** |
+| **2.3 MB**（装好后 3.2 MB） | **16.8 MB** | **0%** | **151 ms** |
 
 纯 AppKit，零第三方依赖；按键由系统事件回调送达，回调里只做几次比较，切换动作放到回调外执行；配置改动由 kqueue 通知、不轮询，仅每 30 秒确认一次按键监听仍开着。
 
-<sub>v1.3.0 (7) · Mac16,12 / Apple M4 / macOS 27.2 · 2026-10-04。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
+<sub>v1.3.1 (10) · Mac16,12 / Apple M4 / macOS 27.2 · 运行数据（空闲、就绪冷启动、字母面板）实测自本机装机的本地验收构建 1.3.1 (10)，构建回执已核对当前源码；下载大小取现有公开包 1.3.1 (8) 的 DMG。 · 2026-10-07。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
 <!-- lightweight:end -->
 
 ## 用法
@@ -59,7 +59,7 @@ initials sync now                 # 立即核对本机与 iCloud Drive 文件；
 
 只同步你选择的 App 和快捷键设置，不记录键盘输入。iCloud 同步使用你自己的 Apple ID；切换应用本身不需要联网。
 
-菜单栏和设置都有“检查更新…”：读取官网的实际发行版本，有新版可在窗口内升级。安装包经过 SHA256、App 身份和开发者签名校验，替换失败保留旧版，配置不变。脚本可用 `initials updates --json` 只读检查；断网或发行记录无效会明确报错。
+菜单栏和设置都有“检查更新…”：读取官网的实际发行版本，有新版可在窗口内升级。安装包经过 SHA256、App 身份和开发者签名校验，替换失败保留旧版，配置不变。脚本可用 `initials updates --json` 只读检查；断网或发行记录无效会明确报错。有新版时 `initials update install --yes` 走窗口里“升级到新版…”的同一条路（先加 `--dry-run` 只看会做什么）。
 
 ## 命令行（给脚本与 agent）
 
@@ -75,7 +75,7 @@ initials sync now                 # 立即核对本机与 iCloud Drive 文件；
 initials list [--side right|left] [--json]   # 两边的触发方式、选项、快捷键冲突、字母表（含 app 是否找得到、实际位置）
 initials preview [字母…] [--side right|left] [--json]  # 每个字母此刻会做什么（打开/切换/隐藏/无），只报告不执行
 initials status [--json]         # 是否运行、辅助功能授权、是否拦截、是否暂停、是否生效
-initials login [--json]          # 是否“登录时打开”（只读）
+initials login [--json]          # 是否“登录时打开”（不带 on|off 时只读）
 initials path [--json]           # 配置与状态文件位置
 initials version [--json]        # 所在 Initials.app 的版本
 
@@ -96,7 +96,13 @@ initials enable|disable [right|left|all]  # 写进配置，重启后仍有效
 
 # 运行中的 app 与外部模块（可加 --json；不改 Initials 配置，不接受 --dry-run）
 initials pause | resume          # 同菜单栏“暂停/恢复”，只在本次运行有效；先用 status 看当前状态
+initials quit [--dry-run]        # 同菜单栏“退出”；再启动：open -g -j -a Initials --args --background
+initials login on|off [--dry-run]  # 同设置窗“登录时打开 Initials”，由所在的 Initials.app 向系统登记，结果按系统回读
 initials hammerspoon rcmd on|off # 只在旧版 MacKit 仍带 rcmd 模块时可用
+
+# 版本更新（“配置与更新”窗口的同一套检查与安装；--json 的失败是 {"ok": false, "command", "error": {"code", "message"}}，见 initials update --help）
+initials update check            # 只读：当前版本、官网最新版本、有没有新版、怎么升级
+initials update install --yes [--dry-run]  # 同窗口“升级到新版…”：校验 SHA256、App 身份和开发者签名后替换所在的 Initials.app，运行中的先退出再重开，旧版进废纸篓；没有新版时不做任何事、退出 0
 ```
 
 给 agent 的典型用法：
@@ -108,7 +114,7 @@ initials preview m s --json | jq '.letters[] | {letter, action, target}'
 initials pause --json && initials status --json | jq '{paused, intercepting, active}'
 ```
 
-退出码：0 成功；1 没找到（字母、app、导入文件不存在或其中没有 right_command 字母、rcmd 模块）；2 用法错误或无法读写（含左 ⌘ 沿用右 ⌘ 字母时编辑左边）；3 Initials 没在运行（status、pause、resume）；4 运行中的 app 没有确认（pause、resume，早于该功能的 app 版本会这样）。`status` 读取 app 写的 `status.json` 并核对进程确实是 Initials：启动、授予辅助功能、暂停/恢复时立即写入；辅助功能被撤销或拦截失效，由已有的 30 秒看门狗发现后改写（只在状态变了时写，不另设定时器），所以这类变化最多晚 30 秒。
+退出码：0 成功；1 没找到（字母、app、导入文件不存在或其中没有 right_command 字母、rcmd 模块）；2 用法错误或无法读写（含左 ⌘ 沿用右 ⌘ 字母时编辑左边）；3 Initials 没在运行（status、pause、resume、quit）；4 运行中的 app 没有确认（pause、resume、quit，早于该功能的 app 版本会这样）。`initials --help` 列出读命令与写命令、`--json` 的输出形状、退出码表和只在窗口里的项。`status` 读取 app 写的 `status.json` 并核对进程确实是 Initials：启动、授予辅助功能、暂停/恢复时立即写入；辅助功能被撤销或拦截失效，由已有的 30 秒看门狗发现后改写（只在状态变了时写，不另设定时器），所以这类变化最多晚 30 秒。
 
 覆盖范围：设置窗里的全部开关、字母表的添加、更换、移动、移除与导入，菜单栏的暂停/恢复和状态，字母面板的内容（`preview`）都有对应命令。只留在图形界面：选 app 的对话框和图标、⌘1/⌘2 等窗口操作、申请辅助功能授权（只能由 app 自己请求，并由用户在系统设置里打开）、切换“登录时打开”（macOS 要求 app 自己注册，CLI 只读）、退出 app。按键切换本身也不做成命令：真的切换会抢走当前焦点；想知道字母会做什么用 `preview`，要切到某个 app 用 `open -a`。
 

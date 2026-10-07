@@ -309,11 +309,13 @@ struct RuntimeStatus: Codable, Equatable {
     }
 }
 
-/// `initials pause|resume` → the running app. Posts carry the support folder as their object,
+/// `initials pause|resume|quit` → the running app. Posts carry the support folder as their object,
 /// so an isolated run (`INITIALS_SUPPORT_DIR`) never reaches the installed app.
 enum RuntimeControl {
     static let pause = Notification.Name("cyou.tianli.initials.pause")
     static let resume = Notification.Name("cyou.tianli.initials.resume")
+    /// `initials quit`: the same path as the menu-bar Quit.
+    static let quit = Notification.Name("cyou.tianli.initials.quit")
     /// The folder's real path. The app creates the folder before listening and the CLI only posts
     /// after reading status.json from it, so both ends resolve an existing folder the same way
     /// (`standardizedFileURL` would drop /private only once the folder exists).

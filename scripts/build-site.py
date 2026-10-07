@@ -44,13 +44,41 @@ def performance_reuse(raw, release):
     return reuse
 
 
+DESCRIPTION = {"zh": "数字来自所列设备实测，版本更新后重新测量。",
+               "en": "Measured on the listed device; re-measured for each version."}
+
+
+def measured_build_note(raw, release, block, lang):
+    """Which build the numbers describe, next to the public package this page offers.
+
+    The marketing version alone cannot tell them apart: the installed build that
+    scripts/measure-sop.py measures may be a local acceptance build newer than the
+    public package of the same version. That script then writes `data`/`data_en`
+    naming both, and the shared block prints them; without that statement the
+    build stops instead of passing local-build numbers off as the download's.
+    """
+    public = f"{release['version']} ({release['build']})"
+    measured_sha = (raw.get("measured_artifact") or {}).get("executable_sha256")
+    if raw["version"] == public and measured_sha == release["artifact"]["sha256"]:
+        return (f"安装包大小与运行数据均实测自公开下载包 v{public}。" if lang == "zh" else
+                f"Download size and runtime numbers were all measured on the public package, v{public}. ")
+    said = raw.get("data" if lang == "zh" else "data_en") or ""
+    if raw["version"] not in said or public not in said or escape(said) not in block:
+        raise SystemExit(f"perf/lightweight.json measures {raw['version']} but the public package is {public}: "
+                         "data/data_en must name both builds (scripts/measure-sop.py writes them)")
+    return ""
+
+
 def lightweight_section(raw, release, reuse, lang):
     # The shared renderer still receives the measurement's true version. The
     # repository gate above separately validates the offered release and review.
     measured = raw["version"].split(" ")[0]
     block = standalone_section(ROOT / "perf/lightweight.json", measured, accent="#1d7a78", lang=lang)
     if not reuse:
-        return block
+        note = measured_build_note(raw, release, block, lang)
+        if note and DESCRIPTION[lang] not in block:
+            raise SystemExit("Shared performance block changed its closing sentence; the build note has no place")
+        return block.replace(DESCRIPTION[lang], escape(note) + DESCRIPTION[lang]) if note else block
     zh = lang == "zh"
     note = (f"以下为 v{measured} 的历史实测，供 v{release['version']} 参考；不是本版本新测。"
             if zh else f"Historical measurements from v{measured}, shown for reference with v{release['version']}; this release has not been re-measured. ")

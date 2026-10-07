@@ -368,5 +368,49 @@ do {
     print(String(format: "bench: %.0f ns per key event (%d events)", ns, rounds * events.count))
 }
 
+// MARK: Support-path isolation at run time
+
+// The measurement entry (`--background-measure`) sets INITIALS_SUPPORT_DIR after the process has started.
+// Paths must follow that change; a cached environment would send it back to the owner's folder.
+do {
+    let before = getenv("INITIALS_SUPPORT_DIR").map { String(cString: $0) }
+    let isolated = NSTemporaryDirectory() + "initials-test-isolation-\(getpid())"
+    setenv("INITIALS_SUPPORT_DIR", isolated, 1)
+    check(Paths.supportDirectory.path == isolated, "support folder follows a run-time INITIALS_SUPPORT_DIR")
+    check(Paths.config.path == isolated + "/config.json" && Paths.status.path == isolated + "/status.json",
+          "config and status resolve inside the isolated folder")
+    check(!FileManager.default.fileExists(atPath: isolated), "resolving paths creates nothing")
+    check((try? ConfigStore.load()) == Config(), "a missing isolated config loads the defaults")
+    check(!FileManager.default.fileExists(atPath: isolated), "loading the defaults creates nothing")
+    if let before { setenv("INITIALS_SUPPORT_DIR", before, 1) } else { unsetenv("INITIALS_SUPPORT_DIR") }
+    check(Paths.supportDirectory.path != isolated, "and returns once the variable is restored")
+}
+
+// MARK: Update source
+
+// `initials update install --yes` replaces an app from whatever this returns. Outside an isolated run it is the
+// website and nothing in the environment may change that; an isolated run must never reach the website.
+do {
+    let names = ["INITIALS_SUPPORT_DIR", "APP_LIFECYCLE_SUPPORT_DIR", "APP_LIFECYCLE_CLOUD_DIR"]
+    let before = names.map { name in getenv(name).map { String(cString: $0) } }
+    func isWebsite(_ source: AppUpdateSource) -> Bool {
+        if case .manifest(let url) = source { return url == InitialsUpdates.feed && url.scheme == "https" }
+        return false
+    }
+    func isTestChannel(_ source: AppUpdateSource) -> Bool {
+        if case .privateCloud(let channel) = source { return channel == InitialsUpdates.testChannel }
+        return false
+    }
+    unsetenv("INITIALS_SUPPORT_DIR")
+    setenv("APP_LIFECYCLE_SUPPORT_DIR", "/nonexistent/lifecycle", 1)
+    setenv("APP_LIFECYCLE_CLOUD_DIR", "/nonexistent/cloud", 1)
+    check(isWebsite(InitialsUpdates.source), "outside an isolated run the update source is the website, whatever the lifecycle test variables say")
+    setenv("INITIALS_SUPPORT_DIR", "/nonexistent/support", 1)
+    check(isTestChannel(InitialsUpdates.source), "an isolated run reads the test channel, never the website")
+    for (name, value) in zip(names, before) {
+        if let value { setenv(name, value, 1) } else { unsetenv(name) }
+    }
+}
+
 print(failures == 0 ? "tests: all passed" : "tests: \(failures) failed")
 exit(failures == 0 ? 0 : 1)

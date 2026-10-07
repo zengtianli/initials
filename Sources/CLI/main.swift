@@ -1,9 +1,13 @@
-import Foundation
+import AppKit
 
 /// `initials` — the Settings window and menu-bar state for scripts and agents. It reads and edits
 /// the same config.json the app watches (the running app applies edits within a moment) through
 /// Sources/Shared, the code the Settings window uses. Every command takes --help and --json.
 /// Exit codes: 0 ok, 1 not found, 2 usage or error, 3 Initials not running, 4 app did not confirm.
+/// The top-level help lists read and write commands, the --json shape, the exit codes and what stays
+/// in the window; project.yaml's sop.agent_cli maps every control of the UI to one of these commands.
+/// `update check|install` is the shared Settings-and-Updates layer (Sources/Shared/Lifecycle): it judges
+/// its own options and answers in its own form, which `initials update --help` spells out.
 
 struct Command {
     let usage: String
@@ -11,6 +15,8 @@ struct Command {
     var details = ""
     var positional: ClosedRange<Int> = 0...0
     var options: Set<String> = []
+    /// Replaces the note about --json and exit codes, for a command that answers in another form.
+    var closing: String? = nil
 }
 
 let valueOptions: Set<String> = ["--side", "--from"]
@@ -30,11 +36,43 @@ let commandTable: [(String, Command)] = [
     ("status", Command(usage: "initials status [--json]",
                        about: "Is the app running, allowed Accessibility, intercepting, paused, active?",
                        details: "Exit 3 when Initials is not running (JSON is still printed, with ok false).")),
-    ("login", Command(usage: "initials login [--json]",
-                      about: "Does Initials open at login? (Read only; switch it in Settings.)")),
+    ("login", Command(usage: "initials login [on|off] [--dry-run] [--json]",
+                      about: "Does Initials open at login? With on|off: switch it, like the Settings checkbox.",
+                      details: "Without on|off it only reads. on|off asks the Initials.app this command ships in (macOS registers the\napp itself) and reports the state macOS gives back; exit 2 when macOS did not take the change (for example\nit waits for approval in System Settings). An isolated run (INITIALS_SUPPORT_DIR) never changes it.\nJSON: openAtLogin, status (enabled|notRegistered|requiresApproval|notFound); on|off add command, changed, dryRun.",
+                      positional: 0...1, options: ["--dry-run"])),
     ("path", Command(usage: "initials path [--json]", about: "Print the config file path.")),
     ("version", Command(usage: "initials version [--json]", about: "Print the version of the Initials.app this command ships in.")),
     ("updates", Command(usage: "initials updates [--json]", about: "Check the actual release feed for a newer version (read only).")),
+    ("update", Command(usage: "initials update check [--json]\ninitials update install --yes [--dry-run] [--json]",
+                       about: "check: what the window's Check for Updates reads. install --yes: the window's “Upgrade to the new version…”.",
+                       details: """
+                       check only reads the release record: current {version, build}, source, latest, update_available, state
+                       (update_available | up_to_date | ahead_of_channel), message, upgrade {in_app, button, how, download_url, command}.
+                       install --yes takes the window's own path: it downloads the release, verifies its SHA256, app identity and
+                       developer signature, asks a running Initials to quit, replaces the Initials.app this command ships in and
+                       reopens it if it was running. Settings are kept, a failed replacement is rolled back, and the replaced app
+                       goes to the Trash. With no newer release it changes nothing and exits 0 (installed false). --dry-run only
+                       says what it would do. Read back with `initials update check` or `initials version`.
+                       install JSON: installed, state (installed | up_to_date | ahead_of_channel), message, current, latest, source,
+                       app_running; after a replacement also previous, backup (null on success), old_app_cleanup, relaunched;
+                       --dry-run gives dry_run, would_install {from, to}, installation, will_quit_app, will_relaunch.
+                       An isolated run (INITIALS_SUPPORT_DIR) never goes online: it reads the test channel under
+                       APP_LIFECYCLE_CLOUD_DIR and replaces only an app copy inside APP_LIFECYCLE_SUPPORT_DIR.
+                       """,
+                       positional: 1...1,
+                       closing: """
+                       These two answer in the shared Settings-and-Updates form, with messages in Chinese.
+                       --json: success {"ok": true, "command": "update install", …}; failure {"ok": false, "command": …,
+                       "error": {"code", "message"}} with a non-zero exit code.
+                       Exit codes: 0 ok (also when there is no newer release)
+                                   1 not done, error.code says why: check_incomplete (release record not read) · manual_install
+                                     (this install location or channel cannot be replaced by a command; download_url is given) ·
+                                     needs_product_installer · upgrade_failed (download or verification failed, the app is
+                                     untouched) · app_busy (the running app did not quit, nothing replaced) · replace_failed (old
+                                     app kept or rolled back) · cleanup_failed (new app verified, old copy not moved to the Trash) ·
+                                     isolated_run (an isolated run was asked to replace an app outside its test folder) · failed
+                                   2 usage (wrong arguments) · confirmation_required (install without --yes)
+                       """)),
     ("set", Command(usage: "initials set <letter> <app> [--side right|left] [--dry-run] [--json]",
                     about: "Pin an app to a letter (app: name, bundle id or /path/To.app).",
                     details: "Left ⌘ has its own letters only after `initials share off`.",
@@ -81,21 +119,63 @@ let commandTable: [(String, Command)] = [
                       details: "Exit 3 when Initials is not running, 4 when it does not confirm within 2 seconds.")),
     ("resume", Command(usage: "initials resume [--json]", about: "Resume interception after a pause.",
                        details: "Exit 3 when Initials is not running, 4 when it does not confirm within 2 seconds.")),
+    ("quit", Command(usage: "initials quit [--dry-run] [--json]",
+                     about: "Quit the running app, like the menu-bar Quit (keys pass through until it is started again).",
+                     details: "Exit 3 when Initials is not running, 4 when it is still running after 3 seconds.\nStart it again without a window: open -g -j -a Initials --args --background\nJSON: command, running, changed, dryRun, pid.",
+                     options: ["--dry-run"])),
     ("hammerspoon", Command(usage: "initials hammerspoon rcmd on|off [--json]",
                             about: "Switch an older MacKit's Hammerspoon rcmd module (exit 1 when it is not installed).",
                             positional: 2...2)),
 ]
 let commands = Dictionary(uniqueKeysWithValues: commandTable)
 
+/// Commands that both read and write appear once in each group, with the form that does it.
+func usageLines(_ names: [String]) -> String { names.map { "  " + commands[$0]!.usage }.joined(separator: "\n") }
 let usage = """
 initials — pin apps to letters; hold either ⌘ + letter, or double-tap a ⌘ then a letter
+The Settings window and the menu-bar item for scripts and agents: same config.json, same code as the window.
 
-\(commandTable.map { "  " + $0.1.usage }.joined(separator: "\n"))
+Read (never write a file, change state, open a window or ask for a permission):
+\(usageLines(["status", "list", "preview"]))
+  initials login [--json]
+  initials sync [status] [--json]
+\(usageLines(["updates"]))
+  initials update check [--json]
+\(usageLines(["path", "version"]))
+
+Write config.json (the running app and the Settings window follow at once; --dry-run saves nothing):
+\(usageLines(["set", "unset", "move", "import", "enable", "disable", "hold", "tap", "cycle", "hide-front", "share"]))
+
+Write elsewhere (the running app, the installed app itself, this Mac's login items, iCloud Drive, a file you name, Hammerspoon):
+\(usageLines(["pause", "resume", "quit"]))
+  initials login on|off [--dry-run] [--json]
+  initials sync on|off|now [--dry-run] [--json]
+  initials update install --yes [--dry-run] [--json]
+\(usageLines(["export", "hammerspoon"]))
 
   initials <command> --help      details for one command (with --json: {"ok", "command", "help"})
-Every command takes --json (an object with "ok"). Exit codes: 0 ok, 1 not found, 2 usage or error,
-3 Initials not running, 4 the running app did not confirm. Edits go to config.json, which the running
-app applies at once; INITIALS_SUPPORT_DIR=<dir> isolates everything for tests.
+
+--json prints one object on stdout. Success: {"ok": true, …} with the command's own fields; every config
+edit adds "command", "changed", "dryRun", "config" and "state" {"right", "left"} (the shape of `list`).
+Failure: {"ok": false, "error": "<reason>", "exitCode": <n>, "command": "<name>"}, the reason also on stderr.
+`update check|install` (the window's “Upgrade to the new version…” and its check) answer in the shared
+Settings-and-Updates form instead: {"ok": true, "command": "update install", …}, and on failure
+{"ok": false, "command": …, "error": {"code", "message"}}; `initials update --help` lists fields and codes.
+Read back after a change with `initials status --json` (running, accessibilityTrusted, tapEnabled, paused,
+intercepting, active, version, pid, config, configError, hammerspoonRcmd) and `initials list --json`.
+Exit codes: 0 ok (also when there was nothing to change, or no newer release to install)
+            1 not found (app, letter, file to import, Hammerspoon rcmd module); `update`: not done, error.code says why
+            2 usage error, or the command could not do it (unreadable config, refused edit, failed check);
+              `update install` without --yes
+            3 Initials is not running (status, pause, resume, quit)
+            4 the running app did not confirm within the time limit (pause, resume, quit)
+Window only (no command; nothing here opens a window, takes focus, asks for a permission or presses keys):
+  - opening the Settings window and the Settings and Updates window; the About panel
+  - Open Accessibility Settings… and allowing Initials there (a person grants it; `status` reports it)
+  - switching the Settings view between right ⌘ and left ⌘ (commands take --side)
+  - the Edit and Window menus and Hide Initials (copy, paste, select all, close, minimize)
+  - the key presses themselves: ⌘ + letter, double-tap ⌘ then a letter or Esc (`preview` says what each would do)
+INITIALS_SUPPORT_DIR=<dir> isolates everything for tests.
 """
 
 // MARK: Parsing
@@ -147,6 +227,7 @@ func fail(_ message: String, code: Int32 = 2, _ extra: [String: Any] = [:]) -> N
 func help(for command: Command) -> String {
     var text = "\(command.usage)\n\n\(command.about)"
     if !command.details.isEmpty { text += "\n\(command.details)" }
+    if let closing = command.closing { return text + "\n\n" + closing }
     var notes: [String] = []
     if command.options.contains("--side") { notes.append(sideNote) }
     if command.options.contains("--dry-run") { notes.append(dryNote) }
@@ -178,18 +259,20 @@ if name.isEmpty || name == "help" {
 }
 guard let spec = commands[name] else { fail("unknown command: \(name)\n\n\(usage)") }
 if wantsHelp { showHelp(help(for: spec), command: name) }
-if let bad = unknown.first { fail("unknown option \(bad) for `\(name)`\n\n\(help(for: spec))") }
-if flags.contains("--version") && name != "version" { fail("--version is not an option of `\(name)`") }
-for option in ["--side", "--from", "--dry-run"] where (values[option] != nil || flags.contains(option)) && !spec.options.contains(option) {
-    fail("`\(name)` does not take \(option)\n\n\(help(for: spec))")
+/// `update` is handed to the shared Settings-and-Updates layer whole (see `runUpdate`): that layer judges the
+/// options and answers in its own form, so none of the checks below speak for it.
+let sharedLayer = name == "update"
+if !sharedLayer {
+    if let bad = unknown.first { fail("unknown option \(bad) for `\(name)`\n\n\(help(for: spec))") }
+    if flags.contains("--version") && name != "version" { fail("--version is not an option of `\(name)`") }
+    for option in ["--side", "--from", "--dry-run"] where (values[option] != nil || flags.contains(option)) && !spec.options.contains(option) {
+        fail("`\(name)` does not take \(option)\n\n\(help(for: spec))")
+    }
 }
 let rest = Array(positional.dropFirst())
-if name == "login", !rest.isEmpty {
-    fail("`initials login` only reads the setting; switch “Open Initials at login” in Settings (macOS asks the app itself).")
-}
-guard spec.positional.contains(rest.count) else { fail("usage: \(spec.usage)") }
+guard sharedLayer || spec.positional.contains(rest.count) else { fail("usage: \(spec.usage)") }
 
-let sideOption = values["--side"]
+let sideOption = sharedLayer ? nil : values["--side"]
 let side: Side = {
     guard let raw = sideOption else { return .right }
     guard let parsed = Side(rawValue: raw) else { fail("--side must be right or left") }
@@ -271,9 +354,96 @@ let hostInfo: [String: Any] = hostContents.flatMap {
     NSDictionary(contentsOf: $0.appendingPathComponent("Info.plist")) as? [String: Any]
 } ?? [:]
 
+/// `SMAppService.mainApp` has to run as the app bundle, so the login item is read and switched by the
+/// Initials binary this command ships next to. Returns what macOS reports afterwards.
+func loginItem(_ arguments: [String]) -> (open: Bool, state: String) {
+    guard let contents = hostContents, hostInfo["CFBundleIdentifier"] as? String == "cyou.tianli.initials" else {
+        fail("login status needs the initials command inside Initials.app (Contents/Resources/bin)")
+    }
+    let process = Process()
+    process.executableURL = contents.appendingPathComponent("MacOS/Initials")
+    process.arguments = arguments
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = FileHandle.nullDevice
+    process.standardInput = FileHandle.nullDevice
+    let done = DispatchSemaphore(value: 0)
+    process.terminationHandler = { _ in done.signal() }
+    do { try process.run() } catch { fail("cannot ask Initials: \(error.localizedDescription)") }
+    if done.wait(timeout: .now() + 5) == .timedOut { process.terminate(); fail("Initials did not answer within 5 s") }
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    // `--login-item-set` exits 1 when macOS kept the old state; its answer still says which.
+    guard let answer = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let open = answer["openAtLogin"] as? Bool, let state = answer["status"] as? String else {
+        fail("Initials gave no login-item status")
+    }
+    return (open, state)
+}
+
+// MARK: update — the shared Settings-and-Updates layer
+
+/// A failure this command decides before handing over, in the shared layer's form.
+func updateFailure(_ code: String, _ message: String, exit status: Int32, command: String = "update") -> Never {
+    if json { printJSON(["ok": false, "command": command, "error": ["code": code, "message": message]]) }
+    else { FileHandle.standardError.write(Data((message + "\n").utf8)) }
+    exit(status)
+}
+
+/// Running copies of `app`: the one serving this support folder (status.json) and any the system lists under the
+/// bundle identifier, each counted only when its binary is inside `app`. That filter is what keeps an isolated run,
+/// or a copy elsewhere on disk, from ever quitting the installed Initials.
+func runningCopies(of app: URL) -> [Int32] {
+    let inside = app.resolvingSymlinksInPath().path + "/Contents/MacOS/"
+    func runsInside(_ pid: Int32) -> Bool {
+        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        guard pid > 0, proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return false }
+        return URL(fileURLWithPath: String(cString: buffer)).resolvingSymlinksInPath().path.hasPrefix(inside)
+    }
+    var pids = NSRunningApplication.runningApplications(withBundleIdentifier: InitialsUpdates.bundleID).map(\.processIdentifier)
+    if let live = RuntimeStatus.live() { pids.append(live.pid) }
+    return Set(pids).filter { $0 != ProcessInfo.processInfo.processIdentifier && runsInside($0) }.sorted()
+}
+
+/// `initials update check|install`: the window's own lookup and installer (AppLifecycleCLI), for the Initials.app
+/// this command ships in and the window's own update source.
+func runUpdate() -> Never {
+    let raw = Array(CommandLine.arguments.dropFirst())
+    let words = raw.filter { !$0.hasPrefix("-") }, options = raw.filter { $0.hasPrefix("-") }
+    // Only the words are judged here, so the usage shown is this product's; the options are the shared layer's.
+    guard words.count == 2, words[0] == "update", ["check", "install"].contains(words[1]) else {
+        updateFailure("usage", "usage: initials update check [--json] | initials update install --yes [--dry-run] [--json]", exit: 2)
+    }
+    let sub = words[1], command = "update " + sub
+    guard let contents = hostContents, hostInfo["CFBundleIdentifier"] as? String == InitialsUpdates.bundleID,
+          let bundle = Bundle(url: contents.deletingLastPathComponent()) else {
+        updateFailure("failed", "update needs the initials command inside Initials.app (Contents/Resources/bin)", exit: 1, command: command)
+    }
+    if InitialsUpdates.isolated {
+        // The shared layer's own isolation: a test feed only, no relaunch, backup and retired copy inside the test folder.
+        if (ProcessInfo.processInfo.environment["APP_LIFECYCLE_SUPPORT_DIR"] ?? "").isEmpty {
+            setenv("APP_LIFECYCLE_SUPPORT_DIR", Paths.supportDirectory.appendingPathComponent("lifecycle").path, 1)
+        }
+        setenv("APP_LIFECYCLE_NO_RELAUNCH", "1", 1)
+        if sub == "install", options.contains("--yes"), !options.contains("--dry-run") {
+            let root = URL(fileURLWithPath: ProcessInfo.processInfo.environment["APP_LIFECYCLE_SUPPORT_DIR"] ?? "").resolvingSymlinksInPath().path + "/"
+            guard bundle.bundleURL.resolvingSymlinksInPath().path.hasPrefix(root) else {
+                updateFailure("isolated_run", "isolated run (INITIALS_SUPPORT_DIR): update install replaces only an app copy inside APP_LIFECYCLE_SUPPORT_DIR",
+                              exit: 1, command: command)
+            }
+        }
+    }
+    var product = AppLifecycleCLI.Product(command: "initials", name: "Initials", configuration: nil, updateSource: InitialsUpdates.source)
+    product.bundle = bundle
+    product.runningApp = { runningCopies(of: bundle.bundleURL) }
+    exit(AppLifecycleCLI.run(["update", sub] + options, product: product))
+}
+
 // MARK: Commands
 
 switch name {
+case "update":
+    runUpdate()
+
 case "updates":
     let version = hostInfo["CFBundleShortVersionString"] as? String ?? "0"
     let build = hostInfo["CFBundleVersion"] as? String ?? "0"
@@ -285,8 +455,8 @@ case "updates":
                                                           at: URL(fileURLWithPath: path), bundleID: "cyou.tianli.initials", channel: "test") }
         signal.signal()
     } else {
-        AppUpdateChecker.check(source: .manifest(URL(string: "https://initials.tianli.cyou/updates.json")!),
-                               bundleID: "cyou.tianli.initials", version: version, build: build) { response = $0; signal.signal() }
+        AppUpdateChecker.check(source: .manifest(InitialsUpdates.feed),
+                               bundleID: InitialsUpdates.bundleID, version: version, build: build) { response = $0; signal.signal() }
     }
     guard signal.wait(timeout: .now() + 25) == .success, let response else { fail("Update check timed out; current version is unchanged.") }
     switch response {
@@ -448,28 +618,52 @@ case "pause", "resume":
          + (status.paused == nil ? "; this version predates pause support" : ""), code: 4)
 
 case "login":
-    guard let contents = hostContents, hostInfo["CFBundleIdentifier"] as? String == "cyou.tianli.initials" else {
-        fail("login status needs the initials command inside Initials.app (Contents/Resources/bin)")
+    guard !dryRun || !rest.isEmpty else { fail("--dry-run is for login on/off only") }
+    let want = rest.first.map(onOff)
+    let (open, state) = loginItem(["--login-item-status"])
+    guard let want else {
+        if json { printJSON(["ok": true, "openAtLogin": open, "status": state]) }
+        else { print("open at login: \(open ? "on" : "off") (\(state))") }
+        break
     }
-    let process = Process()
-    process.executableURL = contents.appendingPathComponent("MacOS/Initials")
-    process.arguments = ["--login-item-status"]
-    let pipe = Pipe()
-    process.standardOutput = pipe
-    process.standardError = FileHandle.nullDevice
-    process.standardInput = FileHandle.nullDevice
-    let done = DispatchSemaphore(value: 0)
-    process.terminationHandler = { _ in done.signal() }
-    do { try process.run() } catch { fail("cannot ask Initials: \(error.localizedDescription)") }
-    if done.wait(timeout: .now() + 5) == .timedOut { process.terminate(); fail("Initials did not answer within 5 s") }
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    guard process.terminationStatus == 0,
-          let answer = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let open = answer["openAtLogin"] as? Bool, let state = answer["status"] as? String else {
-        fail("Initials gave no login-item status")
+    var after = (open: open, state: state)
+    if open != want && !dryRun {
+        // The registration belongs to the installed app; an isolated run must not add its own copy.
+        guard ProcessInfo.processInfo.environment["INITIALS_SUPPORT_DIR"] == nil else {
+            fail("isolated run (INITIALS_SUPPORT_DIR): the login item is not changed")
+        }
+        after = loginItem(["--login-item-set", want ? "on" : "off"])
+        guard after.open == want else {
+            fail("macOS did not turn “Open Initials at login” \(want ? "on" : "off") (status: \(after.state))",
+                 ["openAtLogin": after.open, "status": after.state])
+        }
     }
-    if json { printJSON(["ok": true, "openAtLogin": open, "status": state]) }
-    else { print("open at login: \(open ? "on" : "off") (\(state))") }
+    if json {
+        printJSON(["ok": true, "command": name, "openAtLogin": dryRun ? want : after.open, "status": after.state,
+                   "changed": open != want, "dryRun": dryRun])
+    } else {
+        print("open at login: \(want ? "on" : "off")" + (open == want ? " (already)" : dryRun ? " (dry run: nothing changed)" : " (\(after.state))"))
+    }
+
+case "quit":
+    guard let status = RuntimeStatus.live() else { fail("Initials is not running", code: 3) }
+    if dryRun {
+        if json { printJSON(["ok": true, "command": name, "running": true, "changed": false, "dryRun": true, "pid": Int(status.pid)]) }
+        else { print("would quit Initials \(status.version) (pid \(status.pid))\n(dry run: nothing changed)") }
+        exit(0)
+    }
+    DistributedNotificationCenter.default().postNotificationName(RuntimeControl.quit, object: RuntimeControl.scope,
+                                                                  userInfo: nil, deliverImmediately: true)
+    let deadline = Date().addingTimeInterval(3)
+    while Date() < deadline {
+        if !RuntimeStatus.isInitialsProcess(status.pid) {
+            if json { printJSON(["ok": true, "command": name, "running": false, "changed": true, "dryRun": false, "pid": Int(status.pid)]) }
+            else { print("quit Initials (pid \(status.pid)); start it again with: open -g -j -a Initials --args --background") }
+            exit(0)
+        }
+        usleep(50_000)
+    }
+    fail("Initials \(status.version) (pid \(status.pid)) is still running after 3 s; versions before quit support ignore the request", code: 4)
 
 case "set":
     let l = letter(rest[0])

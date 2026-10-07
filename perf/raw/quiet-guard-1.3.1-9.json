@@ -1,0 +1,35 @@
+{
+  "what": "shared sim_lane.run_mac_quiet on the installed build, once: /Applications/Initials.app cloned, LSUIElement, re-signed, open -g -j -n --args -lane_quiet YES --background-measure",
+  "installed": {
+    "version": "1.3.1",
+    "build": "9",
+    "executable_sha256": "61e218291fb7c424a6310bf76dc0b66afaf8cc19211f49f5d2f474e6cd215a86"
+  },
+  "note": "ready_seconds is not a measurement (machine load was high); the five-run measurement is separate. Event taps were listed on the live process by the privacy acceptance's measurement-entry check, not here.",
+  "checked_at": "2026-10-05T20:21:09+0800",
+  "receipt_valid": true,
+  "receipt_reason": "装机可执行文件、图标与当前构建输入均匹配 receipt",
+  "lane": {
+    "ok": true,
+    "ready_signal": "os_log",
+    "ready_seconds": 0.311,
+    "quiet": true,
+    "environment": "native",
+    "window_on_screen": false,
+    "focus_taken": false,
+    "front_unchanged": true,
+    "dock_types": [
+      "UIElement"
+    ],
+    "errors": [],
+    "pid": null
+  },
+  "owner_support_unchanged": true,
+  "owner_support_changed_files": [],
+  "new_event_tap_owners": [],
+  "load_1_5_15": [
+    168.3,
+    279.5,
+    209.8
+  ]
+}

@@ -25,7 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         NSApp.setActivationPolicy(.accessory)
         AppLifecycleUI.install(name: "Initials", configuration: nil,
-                               updateSource: .manifest(URL(string: "https://initials.tianli.cyou/updates.json")!))
+                               updateSource: .manifest(InitialsUpdates.feed))
         loadConfig()
         buildStatusItem()
         watchConfig()
@@ -45,6 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.applyConfig()
             self?.writeStatus()
         }
+        // `initials quit`: the menu-bar Quit's own path, so the tap stops and the status file goes.
+        pauseControl.onQuit = { NSApp.terminate(nil) }
         pauseControl.listen()
         startTap()
         let firstRun = !FileManager.default.fileExists(atPath: Paths.config.path)

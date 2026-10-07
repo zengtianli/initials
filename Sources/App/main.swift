@@ -11,12 +11,16 @@ Initials — the menu-bar app. Settings and status for scripts and agents: the `
   Initials --snapshot out.png --settings right|left [--dark]   offscreen render, then exit
   Initials --snapshot out.png --picker [--right] [--dark]
   Initials --login-item-status           print whether Initials opens at login (JSON), then exit
+  Initials --login-item-set on|off       switch it (what `initials login on|off` runs), print the result, then exit
   Initials --ui-self-test DIR            offscreen UI checks (isolated INITIALS_SUPPORT_DIR only)
   Initials --control-self-test [SECONDS] pause/status channel only (isolated INITIALS_SUPPORT_DIR only)
+  Initials --background-measure -lane_quiet YES   measurement lane only: private support path, no key tap,
+                                         no menu-bar item, no update or iCloud work; reports readiness
 """
 // Anything unrecognised exits here: a stray second copy would fight the running one for the keys.
 let knownFlags: Set<String> = ["--help", "-h", "--version", "--background", "--simulate", "--snapshot", "--settings",
-                               "--picker", "--right", "--dark", "--login-item-status", "--ui-self-test", "--control-self-test"]
+                               "--picker", "--right", "--dark", "--login-item-status", "--login-item-set", "--ui-self-test", "--control-self-test",
+                               QuietMeasure.flag]
 if arguments.contains("--help") || arguments.contains("-h") {
     print(appUsage)
     exit(0)
@@ -29,8 +33,8 @@ if let unknown = arguments.dropFirst().first(where: { $0.hasPrefix("--") && !kno
     fputs("Initials: unknown option \(unknown)\n\n\(appUsage)\n", stderr)
     exit(2)
 }
-// SMAppService.mainApp has to run as this bundle, so `initials login` asks this binary. Read only.
-if arguments.contains("--login-item-status") {
+// SMAppService.mainApp has to run as this bundle, so `initials login` asks this binary.
+func printLoginItem(error: String? = nil) -> Bool {
     let status = SMAppService.mainApp.status
     let name: String
     switch status {
@@ -40,9 +44,36 @@ if arguments.contains("--login-item-status") {
     case .notFound: name = "notFound"
     @unknown default: name = "unknown"
     }
-    let data = try! JSONSerialization.data(withJSONObject: ["openAtLogin": status == .enabled, "status": name], options: [.sortedKeys])
+    var answer: [String: Any] = ["openAtLogin": status == .enabled, "status": name]
+    if let error { answer["error"] = error }
+    let data = try! JSONSerialization.data(withJSONObject: answer, options: [.sortedKeys])
     print(String(decoding: data, as: UTF8.self))
+    return status == .enabled
+}
+// Read only.
+if arguments.contains("--login-item-status") {
+    _ = printLoginItem()
     exit(0)
+}
+// The Settings checkbox's two calls. Exit 0 only when macOS then reports the requested state.
+if let i = arguments.firstIndex(of: "--login-item-set") {
+    guard i + 1 < arguments.count, ["on", "off"].contains(arguments[i + 1]) else {
+        fputs("--login-item-set needs on or off\n", stderr)
+        exit(2)
+    }
+    // A test copy must never register itself as the owner's login item.
+    guard ProcessInfo.processInfo.environment["INITIALS_SUPPORT_DIR"] == nil else {
+        fputs("Initials: an isolated run (INITIALS_SUPPORT_DIR) never changes the login item\n", stderr)
+        exit(1)
+    }
+    let want = arguments[i + 1] == "on"
+    var failure: String?
+    do {
+        if want { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+    } catch {
+        failure = error.localizedDescription
+    }
+    exit(printLoginItem(error: failure) == want ? 0 : 1)
 }
 // `--simulate right:d,left:m`: print what each letter would do right now, without doing it.
 if let i = arguments.firstIndex(of: "--simulate"), i + 1 < arguments.count {
@@ -56,6 +87,10 @@ if let i = arguments.firstIndex(of: "--simulate"), i + 1 < arguments.count {
         Launcher.perform(letter: letter, side: side, config: config)
     }
     exit(0)
+}
+// The measurement lane's copy: entered before the one-copy check, and it never builds the app delegate.
+if arguments.contains(QuietMeasure.flag) {
+    MainActor.assumeIsolated { QuietMeasure.run() }
 }
 for flag in ["--ui-self-test", "--control-self-test"] where arguments.contains(flag) {
     UISelfTest.requireIsolatedSupport(flag)

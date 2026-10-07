@@ -4,12 +4,18 @@
 Initials is a resident menu-bar app with no main window, released as a DMG. Sampling only the running instance
 records idle numbers and the installed size, so every new version lost its download size and its headline speed
 (1.2.0 (6): size and speed missing after Chapter's passive re-measure). This script measures the installed build
-that build/release.json names, and writes perf/lightweight.json and perf/raw/:
+whose build receipt (perf/build-receipt.json) verifies against the current source, and writes perf/lightweight.json
+and perf/raw/. The installed build may be a local acceptance build newer than the public package: the download size
+is always the public DMG that build/release.json names, and `data` says which build the runtime numbers describe.
+
+  ready  five quiet cold launches of a re-signed copy (shared sim_lane.run_mac_quiet with the registered
+         sop.measure.quiet_launch): `--background-measure -lane_quiet YES` loads the configuration from a private
+         support path and logs lane-ready; no key tap, menu-bar item, update or iCloud work (Sources/App/QuietMeasure.swift)
 
   idle   the shared app-lightweight batch_measure on the long-running instance (passive, 60 s, helpers included;
          replaced sections go to history, the version and measured_artifact follow the installed bundle)
   size   measure.py size --download <the release DMG> --installed /Applications/Initials.app
-  speed  the installed binary's `--snapshot <png> --picker --right` with an isolated INITIALS_SUPPORT_DIR holding a
+  picker the installed binary's `--snapshot <png> --picker --right` with an isolated INITIALS_SUPPORT_DIR holding a
          copy of the owner's config.json: production picker entries, layout and Retina PNG export; activation policy
          .prohibited, no event tap, nothing shown or activated; 1 warm-up + 7 runs, median
 
@@ -88,10 +94,14 @@ def main():
     info = plistlib.loads((APP / "Contents/Info.plist").read_bytes())
     short, build = info["CFBundleShortVersionString"], info["CFBundleVersion"]
     exe_sha = sha256(EXE)
-    if (release.get("version"), str(release.get("build"))) != (short, build) or exe_sha != release["artifact"]["sha256"]:
-        print(f"装机 {short} ({build}) 不是 build/release.json 记录的发行构建 {release.get('version')} ({release.get('build')})；"
-              "先按 scripts/release.py 发行并装机再测")
+    registered = app_sop.load_apps("initials-mac")[0]
+    valid, reason = app_sop.verify_build_receipt(registered, APP)
+    if not valid:
+        print(f"装机 {short} ({build}) 不是回执核验过的当前源码构建：{reason}；"
+              "先按 chapter sop build-receipt 构建、scripts/install.sh --restart 装机再测")
         return 1
+    public = f"{release.get('version')} ({release.get('build')})"
+    local_build = (release.get("version"), str(release.get("build"))) != (short, build) or exe_sha != release["artifact"]["sha256"]
     dmg = ROOT / release["artifact_path"]
     if not dmg.is_file() or sha256(dmg) != release["sha256"]:
         print(f"发行包 {release['artifact_path']} 缺失或与 build/release.json 的 SHA256 不符")
@@ -102,7 +112,10 @@ def main():
         return 1
 
     # 1. Idle and installed size from the long-running instance (shared batch_measure; publishes the file itself).
+    measure = (registered.get("sop") or {}).get("measure") or {}
     spec = {"app": str(APP), "running": str(EXE), "launch": False, "repo": ROOT, "in_use": in_use}
+    if measure.get("ready_signal"):  # five quiet ready launches of a copy; idle still comes from the resident instance
+        spec.update(ready_signal=measure["ready_signal"], quiet_launch=measure.get("quiet_launch"))
     try:
         batch_measure.run("initials-mac", spec)
     except batch_measure.Deferred as exc:
@@ -131,19 +144,31 @@ def main():
     (ROOT / "perf/raw").mkdir(parents=True, exist_ok=True)
     write_json(ROOT / raw_rel, {
         "version": version, "samples_ms": samples, "median_ms": median, "runs": RUNS, "binary_sha256": exe_sha,
-        "method": "installed release --snapshot <png> --picker --right with isolated INITIALS_SUPPORT_DIR (copy of user config); "
+        "method": "installed build --snapshot <png> --picker --right with isolated INITIALS_SUPPORT_DIR (copy of user config); "
                   "production picker entries/fill/layout and Retina PNG export; 1 warmup + 7 runs; no event tap",
         "load": load, "measured_at": batch_measure.TODAY})
     today = batch_measure.TODAY
     history = doc.setdefault("history", [])
     if doc.get("size", {}).get("download_bytes") not in (None, size["download_bytes"]):
         history.append({"section": "size", "version": version, "replaced_on": today, "reason": "按发行 DMG 重测", "value": doc["size"]})
-    doc["size"] = size
+    doc["size"] = {**size, "download_file": dmg.name}
+    if local_build:
+        doc["data"] = (f"运行数据（空闲、就绪冷启动、字母面板）实测自本机装机的本地验收构建 {version}，构建回执已核对当前源码；"
+                       f"下载大小取现有公开包 {public} 的 DMG。")
+        doc["data_en"] = (f"Runtime numbers (idle, ready cold launch, letter panel) were measured on the local acceptance build "
+                          f"{version} installed on this Mac, whose build receipt matches the current source; "
+                          f"the download size is the DMG of the public package {public}.")
+    else:
+        doc.pop("data", None)
+        doc.pop("data_en", None)
+    ready_items = [item for item in doc.get("speed_gui") or [] if item.get("key") == "cold_launch_to_ready"]
     for old in doc.get("speed_gui") or []:
-        history.append({"section": "speed_gui", "version": version, "replaced_on": today, "reason": "按登记测量脚本重测", "value": old})
-    doc["speed_gui"] = [{
-        "key": SPEED_KEY, "label": SPEED_LABEL, "label_en": SPEED_LABEL_EN, "median_ms": median, "runs": RUNS, "headline": True,
-        "method": "已安装发行版 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、"
+        if old.get("key") != "cold_launch_to_ready":
+            history.append({"section": "speed_gui", "version": version, "replaced_on": today, "reason": "按登记测量脚本重测", "value": old})
+    doc["speed_gui"] = ready_items + [{
+        "key": SPEED_KEY, "label": SPEED_LABEL, "label_en": SPEED_LABEL_EN, "median_ms": median, "runs": RUNS,
+        "headline": not ready_items,
+        "method": "已安装构建 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、"
                   "布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
         "raw": raw_rel, "load": load}]
     reused = doc.get("reused_for") or {}
