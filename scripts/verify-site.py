@@ -20,7 +20,8 @@ import json
 import sys
 import tempfile
 import threading
-import urllib.request
+import urllib.error
+import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,14 +32,28 @@ PAGES = [('/', 'index.html'), ('/en/', 'en/index.html'), ('/updates.json', 'upda
 
 
 def fetch(url, timeout):
-    """One GET. A truncated body comes back as (None, record); every other failure raises."""
-    request = urllib.request.Request(url, headers={'User-Agent': UA})
+    """One GET. A truncated body comes back as (None, record); every other failure raises.
+
+    The request does not ask the server to close the connection (urllib always sends `Connection: close`):
+    on a tunnelled route the tail of a large body is lost when the server closes right behind it, which read
+    as a truncated DMG although the deployed file was whole. Browsers and the app's updater keep the connection
+    open too. No redirect is followed; anything but 200 is an HTTP error.
+    """
+    parts = urllib.parse.urlsplit(url)
+    connect = http.client.HTTPSConnection if parts.scheme == 'https' else http.client.HTTPConnection
+    connection = connect(parts.netloc, timeout=timeout)
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            status = response.status
+        connection.request('GET', parts.path + ('?' + parts.query if parts.query else ''), headers={'User-Agent': UA})
+        response = connection.getresponse()
+        status = response.status
+        if status != 200:
+            raise urllib.error.HTTPError(url, status, response.reason, response.headers, None)
+        try:
             body = response.read()
-    except http.client.IncompleteRead as error:
-        return None, {'outcome': 'truncated', 'bytes_read': len(error.partial), 'bytes_missing': error.expected}
+        except http.client.IncompleteRead as error:
+            return None, {'outcome': 'truncated', 'bytes_read': len(error.partial), 'bytes_missing': error.expected}
+    finally:
+        connection.close()
     return body, {'outcome': 'complete', 'status': status, 'bytes': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
 
 
@@ -92,13 +107,15 @@ def self_test():
         dmg = bytes(range(256)) * 4096
         (site / 'downloads/Initials-test.dmg').write_bytes(dmg)
         release = {'version': '0.0.0', 'filename': 'Initials-test.dmg', 'sha256': hashlib.sha256(dmg).hexdigest()}
-        plan = {'truncate': 0, 'status': 200, 'alter': False, 'served': 0}
+        plan = {'truncate': 0, 'status': 200, 'alter': False, 'served': 0, 'close_asked': 0}
 
         class Handler(http.server.BaseHTTPRequestHandler):
             def log_message(self, *args):
                 pass
 
             def do_GET(self):
+                if (self.headers.get('Connection') or '').lower() == 'close':
+                    plan['close_asked'] += 1
                 path = self.path.split('?')[0]
                 local = site / (path.lstrip('/') + ('index.html' if path.endswith('/') else ''))
                 body = local.read_bytes()
@@ -134,14 +151,15 @@ def self_test():
         results, ok = [], True
         try:
             for name, truncate, status, alter, expected_ok, expected_attempts in cases:
-                plan.update(truncate=truncate, status=status, alter=alter, served=0)
+                plan.update(truncate=truncate, status=status, alter=alter, served=0, close_asked=0)
                 report = run(origin, site, release, None, timeout=10)
                 attempts = [a['outcome'] for a in report['requests'][-1]['attempts']]
                 passed = (report['ok'] is expected_ok and attempts == expected_attempts
-                          and plan['served'] == len(expected_attempts))
+                          and plan['served'] == len(expected_attempts) and plan['close_asked'] == 0)
                 ok = ok and passed
                 results.append({'case': name, 'passed': passed, 'verified': report['ok'], 'dmg_attempts': attempts,
-                                'dmg_requests_served': plan['served'], 'failure': report['failure']})
+                                'dmg_requests_served': plan['served'],
+                                'requests_asking_to_close': plan['close_asked'], 'failure': report['failure']})
         finally:
             server.shutdown()
         print(json.dumps({'ok': ok, 'cases': results}, ensure_ascii=False, indent=2))
