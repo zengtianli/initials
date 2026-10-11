@@ -1,4 +1,4 @@
-# Initials · one key to any app
+# Initials · one letter to apps and actions
 
 [中文](README.md) | **English**
 
@@ -6,16 +6,18 @@
 
 Hold **⌘** and press a letter to jump to, open or hide that app. **Double-tap ⌘** to show a letter panel, then press a letter. Left and right ⌘ are set up separately and can be used together. Native macOS (Swift + AppKit), lives in the menu bar, with a matching `initials` command-line tool for scripts and agents. See [Resource use](#resource-use) for measurements.
 
+Letters can also run actions: show Downloads, open or reveal the latest download, open the latest screenshot, open a chosen folder/file/URL, or run a macOS shortcut. Settings → Add… → choose an app or action. Actions run each time; the hide-frontmost option applies only to apps.
+
 <!-- lightweight:start -->
 ## Resource use
 
 | Download | Idle memory | Idle CPU | Speed |
 |---|---|---|---|
-| **2.3 MB** (installed 3.2 MB) | **16.8 MB** | **0%** | **151 ms** |
+| **2.5 MB** (installed 3.4 MB) | **16.8 MB** | **0%** | **415 ms** |
 
 Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.
 
-<sub>v1.3.1 (10) · Mac16,12 / Apple M4 / macOS 27.2 · Runtime numbers (idle, ready cold launch, letter panel) were measured on the local acceptance build 1.3.1 (10) installed on this Mac, whose build receipt matches the current source; the download size is the DMG of the public package 1.3.1 (8). · measured 2026-10-07. Measured on the listed device; re-measured for each version. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.4.0 (13) · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-10-11. Measured on the listed version and device; the current version and measurement scope are described on this page. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## How it works
@@ -24,12 +26,32 @@ Each ⌘ key has two switches; turn on either or both. Default: right ⌘ is hel
 
 - **Hold ⌘ + letter**:
   - A pinned letter opens its app, switches to it, or hides it when it is already in front (press again to come back).
+  - A letter bound to an action runs that action; the double-tap panel also shows action names and icons.
   - On right ⌘, an unpinned letter cycles through running apps whose name starts with it.
   - Left ⌘ only takes letters pinned in its table, so ⌘C, ⌘V and the rest keep working; Settings and `initials list` warn when a pinned letter shadows a common shortcut.
   - With ⇧⌥⌃ it passes through; with both ⌘ keys held, right ⌘ wins.
 - **Double-tap ⌘, then a letter**: that side's letter panel appears without taking focus; Esc or 4 seconds without a key closes it. Another key, a click, a long hold, or one tap on each ⌘ does not count.
 - Each side has its own letter table; by default left ⌘ uses the right ⌘ letters.
 - **Settings** (menu bar ⌘ icon → Settings): ⌘1/⌘2 switch between right and left ⌘, ⌘N add, ⌫ remove, ↩ change app, ⌘W close. Import an existing Hammerspoon right_command map in one click; with an older MacKit that still has its rcmd module, Settings also offers "Turn off Hammerspoon rcmd".
+
+## Common actions
+
+The latest download is the most recently added completed item at the top level of Downloads, falling back to creation time when the added date is unavailable. Hidden items and incomplete `.download`, `.crdownload`, `.part` and similar files are skipped. Open uses the default app; Reveal selects the item in Finder. Screenshots are found in the system screenshot folder (Desktop by default), recognized by screenshot metadata or macOS default screenshot names. Empty folders, missing targets and execution failures show a brief message without taking keyboard focus.
+
+```bash
+initials actions --json
+initials bind g show-downloads
+initials bind o open-last-download
+initials bind r reveal-last-download
+initials bind p open-last-screenshot
+initials bind j open-folder ~/Work
+initials bind k open-file ~/Work/report.pdf
+initials bind u open-url https://example.com
+initials bind q run-shortcut "My Shortcut"
+initials preview g o r p --json   # Resolve current targets without execution
+```
+
+These letters are examples; choose your own. Folder and file targets support `~/` paths for migration to another Mac. Named shortcuts must exist on each Mac. Existing app bindings are preserved; action bindings also support export, import and iCloud sync.
 
 ## Install
 

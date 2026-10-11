@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// Which physical ⌘ key a table belongs to. Each can be held with a letter,
 /// double-tapped for the letter picker, or both.
@@ -12,6 +12,9 @@ struct Binding: Codable, Equatable {
     var name: String
     var bundleID: String?
     var path: String?
+    var action: LetterAction? = nil
+    var displayName: String { action?.displayName ?? name }
+    var icon: NSImage? { action?.icon ?? AppCatalog.url(for: self).map { NSWorkspace.shared.icon(forFile: $0.path) } }
 }
 
 struct SideConfig: Codable, Equatable {
@@ -117,7 +120,7 @@ struct Config: Codable, Equatable {
 
     static let commonShortcuts: [Shortcut] = [
         ("a", "select-all", "全选", "Select All"), ("c", "copy", "拷贝", "Copy"), ("f", "find", "查找", "Find"),
-        ("h", "hide", "隐藏", "Hide"), ("m", "minimize", "最小化", "Minimize"), ("n", "new", "新建", "New"),
+        ("g", "find-next", "查找下一个", "Find Next"), ("h", "hide", "隐藏", "Hide"), ("m", "minimize", "最小化", "Minimize"), ("n", "new", "新建", "New"),
         ("o", "open", "打开", "Open"), ("p", "print", "打印", "Print"), ("q", "quit", "退出", "Quit"),
         ("r", "reload", "刷新", "Reload"), ("s", "save", "保存", "Save"), ("t", "new-tab", "新标签页", "New Tab"),
         ("v", "paste", "粘贴", "Paste"), ("w", "close", "关闭窗口", "Close"), ("x", "cut", "剪切", "Cut"),
@@ -222,7 +225,7 @@ enum MacKitKeys {
             for prefix in prefixes {
                 for (letter, binding) in config.bindings(for: side).sorted(by: { $0.key < $1.key }) {
                     rows.append(["component": "initials", "mode": "global", "key": prefix + letter,
-                                 "description": "切换 " + binding.name, "source": Paths.config.path])
+                                 "description": binding.action == nil ? "切换 " + binding.name : binding.displayName, "source": Paths.config.path])
                 }
             }
         }

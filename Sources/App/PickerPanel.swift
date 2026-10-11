@@ -34,7 +34,7 @@ final class PickerPanel: NSPanel {
         effect.layer?.masksToBounds = true
         contentView = effect
 
-        let hint = NSTextField(labelWithString: T("按字母切换 · Esc 关闭", "Press a letter · Esc to close"))
+        let hint = NSTextField(labelWithString: T("按字母执行 · Esc 关闭", "Press a letter · Esc to close"))
         hint.font = .systemFont(ofSize: 12)
         hint.textColor = .secondaryLabelColor
         grid.orientation = .vertical
@@ -61,8 +61,8 @@ final class PickerPanel: NSPanel {
     /// The shared `LetterPreview` rows (also `initials preview`), plus icons.
     static func entries(config: Config, side: Side, running: [RunningApp]) -> [Entry] {
         LetterPreview.rows(config: config, side: side, running: running).map { row in
-            let path = row.binding.map { AppCatalog.url(for: $0)?.path } ?? row.candidates.first?.path
-            return Entry(letter: row.letter, title: row.title, icon: path.map { NSWorkspace.shared.icon(forFile: $0) },
+            let icon = row.binding?.icon ?? row.candidates.first?.path.map { NSWorkspace.shared.icon(forFile: $0) }
+            return Entry(letter: row.letter, title: row.title, icon: icon,
                          pinned: row.pinned)
         }
     }
@@ -93,8 +93,8 @@ final class PickerPanel: NSPanel {
             row!.addArrangedSubview(tile(entry))
         }
         if entries.isEmpty {
-            let empty = NSTextField(labelWithString: T("还没有可切换的 app：在设置里给字母指定 app。",
-                                                       "Nothing to switch to yet: pin apps to letters in Settings."))
+            let empty = NSTextField(labelWithString: T("还没有字母绑定：在设置里添加应用或动作。",
+                                                       "No letter bindings yet: add an app or action in Settings."))
             empty.textColor = .secondaryLabelColor
             grid.addArrangedSubview(empty)
         }

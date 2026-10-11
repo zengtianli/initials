@@ -15,7 +15,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parent / "apps-portal/site"))
-from perf_block import load as load_perf, standalone_section
+from perf_block import load as load_perf, measurement_description, standalone_section, summarize
 ORIGIN = "https://initials.tianli.cyou"
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
@@ -44,10 +44,6 @@ def performance_reuse(raw, release):
     return reuse
 
 
-DESCRIPTION = {"zh": "数字来自所列设备实测，版本更新后重新测量。",
-               "en": "Measured on the listed device; re-measured for each version."}
-
-
 def measured_build_note(raw, release, block, lang):
     """Which build the numbers describe, next to the public package this page offers.
 
@@ -66,7 +62,9 @@ def measured_build_note(raw, release, block, lang):
     if raw["version"] not in said or public not in said or escape(said) not in block:
         raise SystemExit(f"perf/lightweight.json measures {raw['version']} but the public package is {public}: "
                          "data/data_en must name both builds (scripts/measure-sop.py writes them)")
-    return ""
+    return (f"运行数据为本地验收构建 v{raw['version']} 的实测，不代表当前公开发行 v{public} 的运行表现；下载大小仍来自该公开包。"
+            if lang == "zh" else
+            f"Runtime measurements from local acceptance build v{raw['version']} are not representative of the current release v{public}; the download size describes that public package. ")
 
 
 def lightweight_section(raw, release, reuse, lang):
@@ -74,17 +72,22 @@ def lightweight_section(raw, release, reuse, lang):
     # repository gate above separately validates the offered release and review.
     measured = raw["version"].split(" ")[0]
     block = standalone_section(ROOT / "perf/lightweight.json", measured, accent="#1d7a78", lang=lang)
+    block = block.replace("id='light'", "id='resources'", 1)
+    operation_note = ("实际应用切换延迟未测：现有测量覆盖冷启动和字母面板离屏渲染，未测量前台应用切换。"
+                      if lang == "zh" else
+                      "App-switching latency is not measured: the available measurements cover cold launch and offscreen letter-panel rendering, not foreground app switching.")
+    block = block.replace("</section>", f"<p class='fine'>{escape(operation_note)}</p></section>", 1)
+    description = escape(measurement_description(summarize(raw, ROOT / "perf/lightweight.json"), lang))
     if not reuse:
         note = measured_build_note(raw, release, block, lang)
-        if note and DESCRIPTION[lang] not in block:
+        if note and description not in block:
             raise SystemExit("Shared performance block changed its closing sentence; the build note has no place")
-        return block.replace(DESCRIPTION[lang], escape(note) + DESCRIPTION[lang]) if note else block
+        return block.replace(description, escape(note) + description, 1) if note else block
     zh = lang == "zh"
     note = (f"以下为 v{measured} 的历史实测，供 v{release['version']} 参考；不是本版本新测。"
             if zh else f"Historical measurements from v{measured}, shown for reference with v{release['version']}; this release has not been re-measured. ")
     note += reuse["reason" if zh else "reason_en"]
-    block = block.replace("数字来自所列设备实测，版本更新后重新测量。" if zh else
-                          "Measured on the listed device; re-measured for each version.", escape(note))
+    block = block.replace(description, escape(note), 1)
     heading = "资源占用与响应速度。" if zh else "Resource use and response time."
     return block.replace(heading, f"{heading} (v{escape(measured)})")
 
@@ -122,7 +125,7 @@ class EnglishPage(HTMLParser):
                 if key == "srclang":
                     value = "en"
                 if key == "href" and values.get("class") == "language-switch":
-                    value = "/"
+                    value = "/index.html"
                 if key == "lang" and values.get("class") == "language-switch":
                     value = "zh-CN"
             translated.append((key, value))
@@ -136,6 +139,13 @@ class EnglishPage(HTMLParser):
         self.output.append("<" + tag + "".join(
             f" {key}" if value is None else f' {key}="{escape(value, quote=True)}"'
             for key, value in translated) + ">")
+        if tag == "track" and values.get("srclang", "").startswith("zh"):
+            # Preserve English as the default; the native player also offers
+            # the existing Chinese captions required by the promotion contract.
+            chinese = [(key, value) for key, value in attrs if key != "default"]
+            self.output.append("<track" + "".join(
+                f" {key}" if value is None else f' {key}="{escape(value, quote=True)}"'
+                for key, value in chinese) + ">")
 
     def handle_startendtag(self, tag, attrs):
         self.handle_starttag(tag, attrs)
@@ -169,6 +179,8 @@ def main():
     dmg = ROOT / release["artifact_path"]
     if hashlib.sha256(dmg.read_bytes()).hexdigest() != release["sha256"]:
         raise SystemExit("DMG does not match build/release.json; rerun scripts/release.py")
+    if dmg.stat().st_size != release["size_bytes"] or dmg.name != release["filename"]:
+        raise SystemExit("DMG size or filename does not match build/release.json")
     out = ROOT / "build/site"
     if out.is_symlink():
         raise SystemExit("Refusing to replace a symlinked build/site")
@@ -178,6 +190,11 @@ def main():
     (out / "downloads").mkdir()
     shutil.copy2(dmg, out / "downloads" / dmg.name)
     (out / "downloads/SHA256SUMS.txt").write_text(f"{release['sha256']}  {dmg.name}\n")
+    public_release = {"version": release["version"], "build": str(release["build"]),
+                      "filename": dmg.name, "download": f"downloads/{dmg.name}",
+                      "bytes": release["size_bytes"], "sha256": release["sha256"]}
+    (out / "downloads/release-manifest.json").write_text(
+        json.dumps(public_release, ensure_ascii=False, indent=2) + "\n")
     updates = {"bundle_id": "cyou.tianli.initials", "version": release["version"],
                "build": str(release["build"]), "channel": "public", "sha256": release["sha256"],
                "size_bytes": release["size_bytes"], "installation": "bundle",
@@ -240,6 +257,18 @@ def main():
         print(f"warning: facts.json v{release['version']} carries historical v{raw_perf['version']} measurements "
               f"(reviewed reuse); measured_at={facts['measured_at']}", file=sys.stderr)
     product_facts.write(out, facts)
+    # The manifest enumerates every public file except itself (a self-hash is
+    # undefined). Portal validates this complete set before staging the bundle.
+    files = []
+    for path in sorted(out.rglob("*")):
+        if path.is_symlink():
+            raise SystemExit(f"Public site cannot contain symlinks: {path.relative_to(out)}")
+        if path.is_file():
+            files.append({"path": path.relative_to(out).as_posix(),
+                          "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
+    (out / "site-manifest.json").write_text(json.dumps(
+        {"product": "initials-mac", "version": release["version"], "files": files},
+        ensure_ascii=False, indent=2) + "\n")
     print(f"Built {out}: Chinese + English, v{release['version']}, {dmg.name}")
 
 

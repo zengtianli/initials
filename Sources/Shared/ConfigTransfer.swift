@@ -57,6 +57,7 @@ enum ConfigTransfer {
         for side in Side.allCases {
             // Include the independent left table even while it shares the right one.
             for (letter, binding) in config.side(side).bindings.sorted(by: { $0.key < $1.key }) {
+                if binding.action != nil { continue }
                 if let local = resolve(binding) {
                     var relocated = binding
                     relocated.path = local.path

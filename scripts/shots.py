@@ -42,13 +42,18 @@ def binding(v):
 def demo_config(share_left: bool, cycle: bool = True) -> dict:
     # The panel lists running apps for unpinned letters; renders of it turn that off
     # so nothing from this Mac shows up.
-    return {
+    config = {
         "version": 1,
         "right": {"hold": True, "doubleTap": False, "cycleUnbound": cycle,
                   "bindings": {k: binding(v) for k, v in APPS.items()}},
         "left": {"hold": True, "doubleTap": True, "useRightBindings": share_left, "cycleUnbound": cycle,
                  "bindings": {k: binding(v) for k, v in LEFT_APPS.items()}},
     }
+    config["right"]["bindings"].update({
+        "g": {"name": "Show Downloads", "action": {"kind": "show-downloads"}},
+        "o": {"name": "Open Last Downloaded Item", "action": {"kind": "open-last-download"}},
+    })
+    return config
 
 
 def snapshot(support: pathlib.Path, out: pathlib.Path, *args: str, lang: str):

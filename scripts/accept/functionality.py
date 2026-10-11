@@ -11,6 +11,7 @@ import time
 from _common import detail, ensure_build, isolated, run
 from config_sync import exercise as exercise_config_sync
 from update_command import exercise as exercise_update_command
+from actions import exercise as exercise_actions
 
 
 def main():
@@ -156,7 +157,7 @@ def main():
         # The top-level help is the agent's map: read and write commands, the JSON shape, exit codes, window-only items.
         top = command("--help").stdout
         listed = set(re.findall(r"(?m)^  initials ([a-z-]+)", top))
-        every = {"list", "preview", "status", "login", "path", "version", "updates", "update", "set", "unset", "move", "export",
+        every = {"list", "preview", "actions", "bind", "status", "login", "path", "version", "updates", "update", "set", "unset", "move", "export",
                  "import", "sync", "enable", "disable", "hold", "tap", "cycle", "hide-front", "share", "pause", "resume", "quit",
                  "hammerspoon"}
         check(listed == every, "the top-level help lists every command at the start of a line, and nothing that does not exist")
@@ -360,7 +361,9 @@ def main():
                 control.terminate()
                 control.wait(timeout=10)
 
-    detail("functionality", f"PASS: {len(checks)} CLI and dry-run assertions using isolated fixture apps.",
+        exercise_actions(cli, gui, root, env, check)
+
+    detail("functionality", f"PASS: {len(checks)} CLI and dry-run assertions using isolated fixture apps and actions.",
            assertions=checks, method="real_product",
            scope="CLI config, help/option contract (read/write groups, JSON shape, exit codes, window-only items), JSON output, "
                  "preview, login status read and the login on|off dry run and isolated refusal, update check and update install "

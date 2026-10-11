@@ -13,6 +13,7 @@ enum AppAction: Equatable {
     case open(Binding)
     case activate(RunningApp)
     case hide(RunningApp)
+    case execute(LetterAction)
     case nothing
 }
 
@@ -22,6 +23,7 @@ enum AppAction: Equatable {
 func decide(letter: String, bindings: [String: Binding], options: SideConfig,
             running: [RunningApp], frontmostPID: Int32?) -> AppAction {
     if let binding = bindings[letter] {
+        if let action = binding.action { return .execute(action) }
         let app = running.first { matches($0, binding) }
         if let app, app.pid == frontmostPID, options.hideIfFrontmost { return .hide(app) }
         return .open(binding)
@@ -50,6 +52,7 @@ extension AppAction {
         case .activate: return "activate"
         case .hide: return "hide"
         case .nothing: return "nothing"
+        case .execute(let action): return action.kind.rawValue
         }
     }
 
@@ -59,6 +62,7 @@ extension AppAction {
         case .open(let binding): return binding.name
         case .activate(let app), .hide(let app): return app.name
         case .nothing: return nil
+        case .execute(let action): return action.displayName
         }
     }
 

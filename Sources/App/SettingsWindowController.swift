@@ -15,6 +15,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private(set) var config: Config
     private var side: Side = .right
     private var letters: [String] = []
+    private var bindingEditor: BindingEditor?
 
     private let sidePicker = NSSegmentedControl(labels: [T("右 ⌘", "Right ⌘"), T("左 ⌘", "Left ⌘")],
                                                 trackingMode: .selectOne, target: nil, action: nil)
@@ -98,7 +99,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         letterColumn.title = T("字母", "Letter")
         letterColumn.width = 60
         let appColumn = NSTableColumn(identifier: .init("app"))
-        appColumn.title = "App"
+        appColumn.title = T("应用或动作", "App or action")
         appColumn.width = 200
         let pathColumn = NSTableColumn(identifier: .init("path"))
         pathColumn.title = T("位置", "Location")
@@ -198,12 +199,12 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         let s = config.side(side)
         sidePicker.selectedSegment = side == .right ? 0 : 1
         let key = side == .right ? T("右 ⌘", "right ⌘") : T("左 ⌘", "left ⌘")
-        holdCheck.title = T("按住\(key)再按字母：直接切到 app", "Hold \(key) and press a letter: jump to the app")
+        holdCheck.title = T("按住\(key)再按字母：打开应用或执行动作", "Hold \(key) and press a letter: open an app or run an action")
         tapCheck.title = T("快速按两下\(key)：弹出字母面板，再按字母", "Tap \(key) twice: show the letter panel, then press a letter")
         sideNote.stringValue = side == .right
             ? T("两种方式可以同时打开，左右 ⌘ 也可以同时使用。右 ⌘ 同时按 ⇧⌥⌃ 时照常放行。",
                 "Both ways can be on together, and on both ⌘ keys. Right ⌘ with ⇧⌥⌃ passes through.")
-            : T("按住左 ⌘ 时只接管下表里指定了 app 的字母，其余 ⌘C、⌘V 等照常；面板 Esc 或 4 秒不按键自动关闭，不抢焦点。",
+            : T("按住左 ⌘ 时只接管下表里绑定的字母，其余 ⌘C、⌘V 等照常；面板 Esc 或 4 秒不按键自动关闭，不抢焦点。",
                 "Holding left ⌘ only takes the letters pinned below; ⌘C, ⌘V and the rest keep working. The panel closes on Esc or after 4 seconds and never takes focus.")
         holdCheck.state = s.enabled && s.hold ? .on : .off
         tapCheck.state = s.enabled && s.doubleTap ? .on : .off
@@ -367,11 +368,11 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     @objc private func toggleHide() { config.update(side) { $0.hideIfFrontmost = hideCheck.state == .on }; commit() }
     @objc private func toggleCycle() { config.update(side) { $0.cycleUnbound = cycleCheck.state == .on }; commit() }
 
-    @objc private func addBinding() { chooseApp(for: nil) }
+    @objc private func addBinding() { editBinding(for: nil) }
 
     @objc private func changeApp() {
         guard table.selectedRow >= 0 else { return }
-        chooseApp(for: letters[table.selectedRow])
+        editBinding(for: letters[table.selectedRow])
     }
 
     @objc func removeBinding() {
@@ -381,38 +382,26 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         commit(T("已移除 \(letter.uppercased())", "Removed \(letter.uppercased())"))
     }
 
-    /// One dialog: pick the app, choose the letter in the panel's accessory view.
-    private func chooseApp(for existing: String?) {
-        guard let window else { return }
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.application]
-        panel.directoryURL = URL(fileURLWithPath: "/Applications")
-        panel.prompt = T("指定", "Pin")
-        panel.message = T("选择要指定给字母的 app", "Choose the app for this letter")
-        let popup = NSPopUpButton()
-        let taken = config.side(side).bindings
-        for scalar in UnicodeScalar("a").value...UnicodeScalar("z").value {
-            let letter = String(UnicodeScalar(scalar)!)
-            popup.addItem(withTitle: letter.uppercased() + (taken[letter].map { "  (\($0.name))" } ?? ""))
-            popup.lastItem?.representedObject = letter
+    private func editBinding(for existing: String?) {
+        guard config.bindingsEditable(side), let window else { return }
+        let editor = BindingEditor(bindings: config.side(side).bindings, letter: existing)
+        let editingSide = side
+        editor.onSave = { [weak self] binding, letter in
+            guard let self else { return }
+            try self.saveBinding(binding, to: letter, on: editingSide, movingFrom: existing)
         }
-        let preset = existing ?? (UnicodeScalar("a").value...UnicodeScalar("z").value)
-            .map { String(UnicodeScalar($0)!) }.first { taken[$0] == nil } ?? "a"
-        popup.selectItem(at: Int(UnicodeScalar(preset)!.value - UnicodeScalar("a").value))
-        let label = NSTextField(labelWithString: T("字母：", "Letter:"))
-        let accessory = NSStackView(views: [label, popup])
-        accessory.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-        panel.accessoryView = accessory
-        panel.isAccessoryViewDisclosed = true
-        panel.beginSheetModal(for: window) { [weak self] response in
-            guard let self, response == .OK, let url = panel.url, let binding = AppCatalog.binding(for: url),
-                  let letter = popup.selectedItem?.representedObject as? String else { return }
-            do { try self.config.pin(binding, to: letter, on: self.side, movingFrom: existing) } catch {
-                self.message.stringValue = error.localizedDescription
-                return
-            }
-            self.commit(T("\(letter.uppercased()) → \(binding.name)", "\(letter.uppercased()) → \(binding.name)"))
-        }
+        bindingEditor = editor
+        editor.present(on: window)
+    }
+
+    func saveBinding(_ binding: Binding, to letter: String, on side: Side, movingFrom existing: String? = nil) throws {
+        var updated = config
+        try updated.pin(binding, to: letter, on: side, movingFrom: existing)
+        try ConfigStore.save(updated)
+        config = updated
+        onChange?(updated)
+        message.stringValue = "\(letter.uppercased()) → \(binding.displayName)"
+        reload()
     }
 
     @objc private func importHammerspoon() {
@@ -473,7 +462,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             text.font = .monospacedSystemFont(ofSize: 13, weight: .semibold)
         case "app":
             let icon = NSImageView()
-            icon.image = AppCatalog.url(for: binding).map { NSWorkspace.shared.icon(forFile: $0.path) }
+            icon.image = binding.icon
             icon.translatesAutoresizingMaskIntoConstraints = false
             cell.addSubview(icon)
             NSLayoutConstraint.activate([
@@ -482,11 +471,11 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
                 icon.widthAnchor.constraint(equalToConstant: 18), icon.heightAnchor.constraint(equalToConstant: 18),
             ])
             leading = icon.trailingAnchor
-            text.stringValue = binding.name
+            text.stringValue = binding.displayName
         default:
-            let path = AppCatalog.url(for: binding)?.path ?? T("未找到", "Not found")
+            let path = binding.action?.location ?? AppCatalog.url(for: binding)?.path ?? T("未找到", "Not found")
             text.stringValue = path
-            text.textColor = AppCatalog.url(for: binding) == nil ? .systemRed : .secondaryLabelColor
+            text.textColor = binding.action == nil && AppCatalog.url(for: binding) == nil ? .systemRed : .secondaryLabelColor
         }
         NSLayoutConstraint.activate([
             text.leadingAnchor.constraint(equalTo: leading, constant: 6),
@@ -552,6 +541,12 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         do { try importConfiguration(from: source); checks["settings_import_rejects_unrelated_json"] = false }
         catch { checks["settings_import_rejects_unrelated_json"] = config == replacement && callbackCount == 2 }
         checks["settings_sync_control"] = syncCheck.action == #selector(toggleSync) && syncCheck.isEnabled
+        checks.merge(try BindingEditor(bindings: [:]).checkOffscreen(to: directory)) { _, value in value }
+        try saveBinding(try LetterAction(kind: .showDownloads).binding, to: "g", on: .right)
+        let actionDisk = try ConfigStore.load()
+        checks["settings_action_row"] = letters.contains("g") && table.numberOfRows == 2
+            && actionDisk.right.bindings["g"]?.action?.kind == .showDownloads
+        checks["settings_actions_in_bounds"] = try snapshotSelfTestContent(to: directory.appendingPathComponent("settings-actions.png"))
         close()
         checks["settings_close_without_focus"] = window?.isVisible == false && window?.isKeyWindow == false
             && window?.isMainWindow == false && NSApp.activationPolicy() == .prohibited

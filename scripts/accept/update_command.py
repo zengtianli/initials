@@ -14,11 +14,15 @@ from _common import run
 
 
 def exercise(cli, root, env, check):
-    built = Path(cli).parents[3]               # build/accept/Initials.app: outside the lifecycle test folder
+    built = Path(cli).parents[3]               # verified app: outside the lifecycle test folder
     lifecycle, cloud = root / "lifecycle", root / "cloud"
     inside = lifecycle / "apps/Initials.app"   # the only copy an isolated run may replace
     inside.parent.mkdir(parents=True)
     run(["ditto", built, inside])
+    # Both disposable versions need the same signing identity. A reused
+    # Developer ID app otherwise correctly rejects the ad-hoc test update.
+    run(["codesign", "--force", "--sign", "-", "--identifier", "cyou.tianli.initials.cli", inside / "Contents/Resources/bin/initials"])
+    run(["codesign", "--force", "--sign", "-", "--identifier", "cyou.tianli.initials", inside])
     inner = inside / "Contents/Resources/bin/initials"
     feed = cloud / "TianliApps/Updates/cyou.tianli.initials/test"
     feed.mkdir(parents=True)

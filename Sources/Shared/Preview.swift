@@ -32,7 +32,7 @@ struct LetterPreview: Equatable {
     var isEmpty: Bool { binding == nil && candidates.isEmpty }
     /// "Music", or "Mail +1" when more running apps share the letter.
     var title: String {
-        if let binding { return binding.name }
+        if let binding { return binding.displayName }
         guard let first = candidates.first else { return "" }
         return candidates.count == 1 ? first.name : "\(first.name) +\(candidates.count - 1)"
     }

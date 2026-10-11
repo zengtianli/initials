@@ -61,6 +61,7 @@ enum AppCatalog {
     /// The saved location first (what the user picked, e.g. /Applications/Safari.app rather
     /// than its sealed system copy); the bundle identifier finds apps that moved.
     static func url(for binding: Binding) -> URL? {
+        guard binding.action == nil else { return nil }
         if let path = binding.path, FileManager.default.fileExists(atPath: path) { return URL(fileURLWithPath: path) }
         if let id = binding.bundleID, let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) { return url }
         return resolve(binding.name).flatMap { $0.path.map { URL(fileURLWithPath: $0) } }
@@ -69,6 +70,7 @@ enum AppCatalog {
     /// A different Mac may have a different username or app location. On import,
     /// use the stable bundle ID first; never replace a missing app with a namesake.
     static func migrationURL(for binding: Binding) -> URL? {
+        guard binding.action == nil else { return nil }
         if let id = binding.bundleID, !id.isEmpty {
             if let path = binding.path, let local = self.binding(for: URL(fileURLWithPath: path)),
                local.bundleID == id { return URL(fileURLWithPath: path) }

@@ -27,6 +27,7 @@ enum UISelfTest {
             ]
             let settings = SettingsWindowController(config: config)
             var checks = try settings.checkOffscreenInteractions(to: directory)
+            try checkActionDispatch(to: directory, checks: &checks)
             AppLifecycleUI.install(name: "Initials", configuration: nil,
                                    updateSource: .manifest(InitialsUpdates.feed))
             checks.merge(try AppLifecycleUI.shared.offscreenSnapshot(to: directory.appendingPathComponent("updates.png"))) { _, value in value }
@@ -43,7 +44,7 @@ enum UISelfTest {
             try panel.snapshot([], to: directory.appendingPathComponent("picker-empty.png"), appearance: NSAppearance(named: .aqua))
             let emptyLabels = text(in: panel.contentView!)
             checks["picker_empty_refresh"] = !emptyLabels.contains("Fixture 0")
-                && emptyLabels.contains(T("还没有可切换的 app：在设置里给字母指定 app。", "Nothing to switch to yet: pin apps to letters in Settings."))
+                && emptyLabels.contains(T("还没有字母绑定：在设置里添加应用或动作。", "No letter bindings yet: add an app or action in Settings."))
             checks["picker_never_accepts_focus"] = !panel.canBecomeKey && !panel.canBecomeMain && !panel.isVisible
             panel.close()
             checks["picker_closed"] = !panel.isVisible && !panel.isKeyWindow && !panel.isMainWindow
@@ -68,6 +69,40 @@ enum UISelfTest {
     private static func text(in view: NSView) -> [String] {
         (view as? NSTextField).map { [$0.stringValue] } ?? []
             + view.subviews.flatMap { text(in: $0) }
+    }
+
+    private static func checkActionDispatch(to directory: URL, checks: inout [String: Bool]) throws {
+        let downloads = directory.appendingPathComponent("downloads", isDirectory: true)
+        try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
+        setenv("INITIALS_ACTION_DOWNLOADS_DIR", downloads.path, 1)
+        defer { unsetenv("INITIALS_ACTION_DOWNLOADS_DIR"); Launcher.onResolved = nil; Launcher.onActionError = nil }
+        let file = downloads.appendingPathComponent("complete.txt")
+        try Data("fixture".utf8).write(to: file)
+        try Data("partial".utf8).write(to: downloads.appendingPathComponent("newer.crdownload"))
+        var observed: ResolvedAction?
+        var error: String?
+        Launcher.onResolved = { observed = $0 }
+        Launcher.onActionError = { error = $0 }
+        for kind in [ActionKind.showDownloads, .openLastDownload, .revealLastDownload, .openURL, .runShortcut] {
+            observed = nil; error = nil
+            let target: String? = kind == .openURL ? "https://example.com" : kind == .runShortcut ? "Fixture Shortcut" : nil
+            Launcher.perform(.execute(try LetterAction(kind: kind, target: target)))
+            let deadline = Date().addingTimeInterval(5)
+            while observed == nil && error == nil && Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+            let expected: ResolvedAction = kind == .showDownloads ? .open(downloads) : kind == .revealLastDownload ? .reveal(file)
+                : kind == .openURL ? .open(URL(string: target!)!) : kind == .runShortcut ? .shortcut(target!) : .open(file)
+            func normalized(_ target: String) -> String {
+                target.hasPrefix("/") ? URL(fileURLWithPath: target).resolvingSymlinksInPath().path : target
+            }
+            checks["action_dispatch_" + kind.rawValue] = observed?.verb == expected.verb
+                && observed.map { normalized($0.target) } == normalized(expected.target) && error == nil
+        }
+        try FileManager.default.removeItem(at: file)
+        observed = nil; error = nil
+        Launcher.perform(.execute(try LetterAction(kind: .openLastDownload)))
+        let deadline = Date().addingTimeInterval(5)
+        while error == nil && Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.01)) }
+        checks["action_dispatch_empty_error"] = observed == nil && error?.isEmpty == false
     }
 
     private static func checkCloudNotifications(to directory: URL, checks: inout [String: Bool]) throws {

@@ -412,5 +412,6 @@ do {
     }
 }
 
+do { try testActions() } catch { failures += 1; print("FAIL action tests: \(error)") }
 print(failures == 0 ? "tests: all passed" : "tests: \(failures) failed")
 exit(failures == 0 ? 0 : 1)

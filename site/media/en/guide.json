@@ -299,6 +299,12 @@
       "reason": "沿用明确标注为 1.1.0 的字母表与面板离屏导览，演示原有按住、双击和独立字母表。1.3.0 新增的 iCloud 同步与配置导入导出不在这些历史视频中；官网静态设置截图已按 1.3.0 重拍，新增功能由真实 CLI 双目录及 AppKit 离屏自测验收。",
       "reason_en": "Retain the explicitly labelled 1.1.0 offscreen guide for existing letter tables, hold/double-tap switches and picker. It does not demonstrate the new iCloud sync or config import/export. Static Settings screenshots were regenerated with 1.3.0; new functions passed real CLI two-folder and offscreen AppKit acceptance.",
       "verification": "perf/acceptance/functionality.detail.json; perf/acceptance/native_ui.detail.json; 1.3.0 Sources/Shared/KeyEngine.swift, Decision.swift, Preview.swift, Sources/App/PickerPanel.swift and Launcher.swift unchanged from 1.2.0."
+    },
+    "1.4.0 (13)": {
+      "reviewed_at": "2026-10-11",
+      "reason": "旧视频继续说明应用字母与双击面板；新增动作请看本页的动作说明和 1.4.0 原生截图。视频没有重新录制，不展示新版动作编辑器。",
+      "reason_en": "The older clips still explain app letters and the double-tap panel. See this page’s action instructions and native 1.4.0 screenshots for new actions. The clips were not re-recorded and do not show the new action editor.",
+      "verification": "Eight Chinese/English settings and picker snapshots and two action-editor snapshots rendered from the real 1.4.0 app, isolated and offscreen. Unit tests, real CLI and native offscreen action acceptance passed; original videos retained."
     }
   }
 }

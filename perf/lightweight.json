@@ -1,17 +1,17 @@
 {
   "product": "initials",
-  "version": "1.3.1 (10)",
-  "measured_at": "2026-10-07",
+  "version": "1.4.0 (13)",
+  "measured_at": "2026-10-11",
   "device": "Mac16,12 / Apple M4 / macOS 27.2",
   "size": {
-    "download_bytes": 2286992,
-    "download_mb": 2.18,
-    "installed_bytes": 3215360,
-    "installed_mb": 3.07,
-    "download_file": "Initials-1.3.1-arm64.dmg"
+    "download_bytes": 2490640,
+    "download_mb": 2.38,
+    "installed_bytes": 3424256,
+    "installed_mb": 3.27,
+    "download_file": "Initials-1.4.0-arm64.dmg"
   },
   "compare": [],
-  "env_note": "2026-10-07 主会话逐个顺序测量，负载均值 4.35 23.64 38.71；total = 2048.00M  used = 832.00M  free = 1216.00M（开始时）；启动时间受负载影响，内存与 CPU 为进程自身数值",
+  "env_note": "2026-10-11 主会话逐个顺序测量，负载均值 2.71 3.89 4.09；total = 5120.00M  used = 3761.94M  free = 1358.06M（开始时）；启动时间受负载影响，内存与 CPU 为进程自身数值",
   "why": "纯 AppKit，零第三方依赖；按键由系统事件回调送达，回调里只做几次比较，切换动作放到回调外执行；配置改动由 kqueue 通知、不轮询，仅每 30 秒确认一次按键监听仍开着。",
   "why_en": "Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.",
   "history": [
@@ -696,12 +696,442 @@
         "installed_mb": 2.9,
         "download_file": "Initials-1.3.1-arm64.dmg"
       }
+    },
+    {
+      "section": "version",
+      "replaced_on": "2026-10-07",
+      "reason": "装机：安装了轻量化后的新构建",
+      "value": "1.3.1 (10)"
+    },
+    {
+      "section": "idle",
+      "version": "1.3.1 (10)",
+      "replaced_on": "2026-10-07",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "process": "/Applications/Initials.app",
+        "footprint_mb": 16.0,
+        "main_footprint_mb": 16.0,
+        "cpu_pct": 0.0,
+        "main_cpu_pct": 0.0,
+        "processes": [
+          {
+            "name": "main",
+            "cpu_pct": 0.0,
+            "footprint_peak_mb": 16.0
+          }
+        ],
+        "window_s": 60,
+        "settle_s": null,
+        "measured_at": "2026-10-07",
+        "method": "对原登记常驻实例直接采样； measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟；采样时本人在用电脑（被测 App 未在前台被使用，否则丢弃重采）",
+        "load": "负载均值 5.38 19.08 35.52；total = 2048.00M  used = 832.00M  free = 1216.00M",
+        "owner_idle_s_at_start": 90
+      }
+    },
+    {
+      "section": "speed_gui",
+      "version": "1.3.1 (10)",
+      "replaced_on": "2026-10-07",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": [
+        {
+          "key": "cold_launch_to_ready",
+          "label": "冷启动到首屏就绪",
+          "median_ms": 151.0,
+          "runs": 5,
+          "ready_signal": "os_log",
+          "headline": true,
+          "raw_ms": [
+            208.0,
+            151.0,
+            151.0,
+            179.0,
+            136.0
+          ],
+          "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+        },
+        {
+          "key": "picker_offscreen_end_to_end",
+          "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+          "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+          "median_ms": 110.1,
+          "runs": 7,
+          "headline": false,
+          "method": "已安装构建 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
+          "raw": "perf/raw/picker-operation-1.3.1-10.json",
+          "load": "负载均值 5.38 19.08 35.52；total = 2048.00M  used = 832.00M  free = 1216.00M"
+        }
+      ]
+    },
+    {
+      "section": "runtime_measurement",
+      "version": "1.3.1 (10)",
+      "replaced_on": "2026-10-07",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "environment": "native",
+        "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/b78ac9ba5fca45dd98613fd9b2cfbc96.raw.json",
+        "evidence_sha256": "85adff40c44075fb4f85ee84c3c7a092d1d472244869615ee83c46eef376333f",
+        "input_sha256": "4f459738af77a917d0134c871daebe17f1f6278fec52ed8a4c9b55abffda066d",
+        "ready_signal": "os_log"
+      }
+    },
+    {
+      "section": "speed",
+      "version": "1.3.1 (10)",
+      "replaced_on": "2026-10-07",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "cold_launch_ms": 151.0,
+        "runs": 5,
+        "ready_signal": "os_log",
+        "raw_ms": [
+          208.0,
+          151.0,
+          151.0,
+          179.0,
+          136.0
+        ],
+        "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+      }
+    },
+    {
+      "section": "size",
+      "version": "1.3.1 (10)",
+      "replaced_on": "2026-10-07",
+      "reason": "版本变化；旧安装包大小不沿用",
+      "value": {
+        "download_bytes": 2286992,
+        "download_mb": 2.18,
+        "installed_bytes": 3215360,
+        "installed_mb": 3.07,
+        "download_file": "Initials-1.3.1-arm64.dmg"
+      }
+    },
+    {
+      "section": "reused_for",
+      "replaced_on": "2026-10-07",
+      "reason": "1.3.2 (11) 已实测，不再沿用旧版本数字",
+      "value": {
+        "1.3.2 (11)": {
+          "display": "historical_only",
+          "measured_version": "1.3.1 (10)",
+          "measured_executable_sha256": "42dc493d00f8ab456a2fc97313d4e56368b1f4090a3625531640015a1d4b29cf",
+          "reviewed_at": "2026-10-07T22:19:08.693426+08:00",
+          "reason": "1.3.2 与被测的 1.3.1 (10) 程序源码相同，只改了版本号。运行数据沿用 1.3.1 (10) 当天的实测，仅供参考；其中的安装包大小是旧版安装包，1.3.2 的安装包大小以下载处为准。",
+          "reason_en": "1.3.2 is built from the same program source as the measured 1.3.1 (10); only the version number changed. Runtime numbers are the same-day 1.3.1 (10) measurement, for reference only; the package size listed with them is the older package, and the 1.3.2 package size is the one shown at the download link.",
+          "reviewed_sources_sha256": {
+            "Sources/App/AppDelegate.swift": "0d97fc0f45d463bceaff3290beb7747e861dd338f8f7832fde434d676d1ec441",
+            "Sources/App/CloudSyncController.swift": "046dc96f2dfbb91db12c93453177cd17c15426af1ffef6e98482f8ec883f4be9",
+            "Sources/App/EventTap.swift": "6f133f8e87b74b9efb7de131b13f9c4aeb02126a8b0e610329df592ec53ac3cc",
+            "Sources/App/LaneSignal.swift": "e7e68ac41417ddd06e7049a7bd4e01a92d52305bc999cd6ddd323178c64a2ce8",
+            "Sources/App/Launcher.swift": "aa826d20b2510e30f4bb8dafb8806a13860f7e3f17776d389a23a1a0e39d9f67",
+            "Sources/App/PauseControl.swift": "fb1f56b9d5698e892690a67a6643f165020e55cc82ae5ed00838f225c36b726e",
+            "Sources/App/PickerPanel.swift": "9ac0bccf1ee57e789416719bdc9a0093a76e61ab189784f86966049418412347",
+            "Sources/App/QuietMeasure.swift": "4c8ca6dada3acc610b2d61c535d60e6efb61e0fa037fe4b4fc8ff12c0a227d6c",
+            "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
+            "Sources/App/SettingsWindowController.swift": "b6767c4c7b1a5921f7d92ea0351616acb3125bc20e6df4251d31f65e14756ddc",
+            "Sources/App/Snapshot.swift": "743224e0d0b5dbc5f7451cc697ec9c91023b547e88e05fad88b4026a65c374b6",
+            "Sources/App/UISelfTest.swift": "629df8a35c939fe897da7ca7e021009194870c6b4f0471df81e0cf19a35637af",
+            "Sources/App/main.swift": "78bf3886a74e3eb760b160201eccf3bec63b90d47d0aa84d02de5dbba1197272",
+            "Sources/CLI/main.swift": "7a2d90669cdf680aa6c3e14d7dd362fc16660667374059a4db4a75bbb17e87dc",
+            "Sources/Shared/AppCatalog.swift": "71330e6bcad7c48eee7746593542521b48bbc017a573bc896828cae52c1312cf",
+            "Sources/Shared/CloudSync.swift": "bbf35456c55d8704caee32d29d848fde0c0724258266f211a0e0480b3cb01d80",
+            "Sources/Shared/Config.swift": "fcd67af6e4fbec5035866d8bb65dadaec013e17e6b864c4da7b2e44c74ae53cd",
+            "Sources/Shared/ConfigTransfer.swift": "8fd68e4da3236af2c2b86f6e3a727f2587019feaf66fa3a34f004bfb1ba5d643",
+            "Sources/Shared/Decision.swift": "c81084bd930d6d6a741ebf9bfbf5f563ae3742586dbd3a101a5ba53dea2e8d3d",
+            "Sources/Shared/Hammerspoon.swift": "e3a5c618b14b107a602b4f6ebec0aa2d88af378e435f0b6edea284c538fb7b51",
+            "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
+            "Sources/Shared/Lifecycle/AppConfiguration.swift": "ba4d6aa1f52966159e5b74b1ca2878734c61cad80355ace25e19c0f44626947f",
+            "Sources/Shared/Lifecycle/AppLifecycle.swift": "3033bc6f87a69a2402ff1cda2c8196a4abd677222582c75d21302a65626c2d89",
+            "Sources/Shared/Lifecycle/AppLifecycleCLI.swift": "f33393d954dac50331f4fd650066c6ecea573970d53b50b43e8a86cab708241c",
+            "Sources/Shared/Lifecycle/AppLifecycleUI.swift": "fb946d731009b3a797427d706473cf8956c60d0a31a6ada287267f3acbdd7c34",
+            "Sources/Shared/Preview.swift": "80ce0b3990f04c512099e814ef256831652187d861badf979cb34c5f371780fb",
+            "Sources/Shared/Updates.swift": "fa8b922d86d04009609a1eeb008ae34c460346705180def0ee4cbb55afbd13ce",
+            "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+          },
+          "verification": "git diff daa7bbc..7941a2f is empty for Sources, Resources, Tests and build.sh; Info.plist differs only in CFBundleShortVersionString 1.3.1 -> 1.3.2 and CFBundleVersion 10 -> 11. Not re-measured at release: another app_sop round held the lock and the 1-minute load was above 100."
+        }
+      }
+    },
+    {
+      "section": "version",
+      "replaced_on": "2026-10-10",
+      "reason": "装机：安装了轻量化后的新构建",
+      "value": "1.3.2 (11)"
+    },
+    {
+      "section": "idle",
+      "version": "1.3.2 (11)",
+      "replaced_on": "2026-10-10",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "process": "/Applications/Initials.app",
+        "footprint_mb": 16.0,
+        "main_footprint_mb": 16.0,
+        "cpu_pct": 0.02,
+        "main_cpu_pct": 0.02,
+        "processes": [
+          {
+            "name": "main",
+            "cpu_pct": 0.016,
+            "footprint_peak_mb": 16.0
+          }
+        ],
+        "window_s": 60,
+        "settle_s": null,
+        "measured_at": "2026-10-07",
+        "method": "对原登记常驻实例直接采样； measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟；采样时本人在用电脑（被测 App 未在前台被使用，否则丢弃重采）",
+        "load": "负载均值 3.69 7.85 19.79；total = 3072.00M  used = 2294.06M  free = 777.94M",
+        "owner_idle_s_at_start": 0
+      }
+    },
+    {
+      "section": "speed_gui",
+      "version": "1.3.2 (11)",
+      "replaced_on": "2026-10-10",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": [
+        {
+          "key": "cold_launch_to_ready",
+          "label": "冷启动到首屏就绪",
+          "median_ms": 174.0,
+          "runs": 5,
+          "ready_signal": "os_log",
+          "headline": true,
+          "raw_ms": [
+            193.0,
+            162.0,
+            165.0,
+            182.0,
+            174.0
+          ],
+          "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+        },
+        {
+          "key": "picker_offscreen_end_to_end",
+          "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+          "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+          "median_ms": 119.6,
+          "runs": 7,
+          "headline": false,
+          "method": "已安装构建 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
+          "raw": "perf/raw/picker-operation-1.3.2-11.json",
+          "load": "负载均值 3.69 7.85 19.79；total = 3072.00M  used = 2294.06M  free = 777.94M"
+        }
+      ]
+    },
+    {
+      "section": "runtime_measurement",
+      "version": "1.3.2 (11)",
+      "replaced_on": "2026-10-10",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "environment": "native",
+        "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/104047222d4348b3951cf21e10a64f00.raw.json",
+        "evidence_sha256": "55273fa7ea6b2b5fab16d500fbe719694bebe89fb0e47e06b13c2bf9fd5fda1b",
+        "input_sha256": "13a6347f1d8de4c70c4b85ff0f594332ff583d3a2f5acb6c3adb0b1dd67a27a4",
+        "ready_signal": "os_log"
+      }
+    },
+    {
+      "section": "speed",
+      "version": "1.3.2 (11)",
+      "replaced_on": "2026-10-10",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "cold_launch_ms": 174.0,
+        "runs": 5,
+        "ready_signal": "os_log",
+        "raw_ms": [
+          193.0,
+          162.0,
+          165.0,
+          182.0,
+          174.0
+        ],
+        "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+      }
+    },
+    {
+      "section": "size",
+      "version": "1.3.2 (11)",
+      "replaced_on": "2026-10-10",
+      "reason": "版本变化；旧安装包大小不沿用",
+      "value": {
+        "download_bytes": 2378009,
+        "download_mb": 2.27,
+        "installed_bytes": 3215360,
+        "installed_mb": 3.07,
+        "download_file": "Initials-1.3.2-arm64.dmg"
+      }
+    },
+    {
+      "section": "version",
+      "replaced_on": "2026-10-11",
+      "reason": "装机：安装了轻量化后的新构建",
+      "value": "1.3.2 (12)"
+    },
+    {
+      "section": "idle",
+      "version": "1.3.2 (12)",
+      "replaced_on": "2026-10-11",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "process": "/Applications/Initials.app",
+        "footprint_mb": 16.0,
+        "main_footprint_mb": 16.0,
+        "cpu_pct": 0.02,
+        "main_cpu_pct": 0.02,
+        "processes": [
+          {
+            "name": "main",
+            "cpu_pct": 0.017,
+            "footprint_peak_mb": 16.0
+          }
+        ],
+        "window_s": 60,
+        "settle_s": null,
+        "measured_at": "2026-10-10",
+        "method": "对原登记常驻实例直接采样； measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟；采样时本人在用电脑（被测 App 未在前台被使用，否则丢弃重采）",
+        "load": "负载均值 3.10 4.48 6.34；total = 3072.00M  used = 2381.56M  free = 690.44M",
+        "owner_idle_s_at_start": 55
+      }
+    },
+    {
+      "section": "speed_gui",
+      "version": "1.3.2 (12)",
+      "replaced_on": "2026-10-11",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": [
+        {
+          "key": "cold_launch_to_ready",
+          "label": "冷启动到首屏就绪",
+          "median_ms": 357.0,
+          "runs": 5,
+          "ready_signal": "os_log",
+          "headline": true,
+          "raw_ms": [
+            802.0,
+            277.0,
+            411.0,
+            357.0,
+            308.0
+          ],
+          "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+        },
+        {
+          "key": "picker_offscreen_end_to_end",
+          "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+          "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+          "median_ms": 82.1,
+          "runs": 7,
+          "headline": false,
+          "method": "已安装构建 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
+          "raw": "perf/raw/picker-operation-1.3.2-12.json",
+          "load": "负载均值 3.10 4.48 6.34；total = 3072.00M  used = 2381.56M  free = 690.44M"
+        }
+      ]
+    },
+    {
+      "section": "runtime_measurement",
+      "version": "1.3.2 (12)",
+      "replaced_on": "2026-10-11",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "environment": "native",
+        "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/19121583ccce4bfdadd82e1bbb0c0e4f.raw.json",
+        "evidence_sha256": "653e03b051cc806df787d719d7b91416f8889a3683b9bbb5710a86cbec40777d",
+        "input_sha256": "a6e5b29c687a69b7c386ff552b1910db1e052cebaa64c55f3e7f65764425452b",
+        "ready_signal": "os_log"
+      }
+    },
+    {
+      "section": "speed",
+      "version": "1.3.2 (12)",
+      "replaced_on": "2026-10-11",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "cold_launch_ms": 357.0,
+        "runs": 5,
+        "ready_signal": "os_log",
+        "raw_ms": [
+          802.0,
+          277.0,
+          411.0,
+          357.0,
+          308.0
+        ],
+        "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+      }
+    },
+    {
+      "section": "size",
+      "version": "1.3.2 (12)",
+      "replaced_on": "2026-10-11",
+      "reason": "版本变化；旧安装包大小不沿用",
+      "value": {
+        "download_bytes": 2378009,
+        "download_mb": 2.27,
+        "installed_bytes": 3219456,
+        "installed_mb": 3.07,
+        "download_file": "Initials-1.3.2-arm64.dmg"
+      }
+    },
+    {
+      "section": "reused_for",
+      "replaced_on": "2026-10-11",
+      "reason": "1.4.0 (13) 已实测，不再沿用旧版本数字",
+      "value": {
+        "1.4.0 (13)": {
+          "display": "historical_only",
+          "measured_version": "1.3.2 (12)",
+          "measured_executable_sha256": "6637b99d8c0732881bb60aea3423e74c23db38ccb5ab3159e16bc48d1db4b79f",
+          "reviewed_at": "2026-10-11",
+          "reason": "本次新增文件与下载动作，运行表现尚未重新测量；以下为 v1.3.2 (12) 的历史实测，仅供参考。",
+          "reason_en": "This release adds file and download actions. Runtime performance has not been re-measured; the following v1.3.2 (12) results are historical reference only.",
+          "reviewed_sources_sha256": {
+            "Sources/App/ActionFeedback.swift": "99e15c513b6dfdbdf9035508e246251fa9f48e8a1b5f7e4d00f9ee86db84de10",
+            "Sources/App/AppDelegate.swift": "0d97fc0f45d463bceaff3290beb7747e861dd338f8f7832fde434d676d1ec441",
+            "Sources/App/BindingEditor.swift": "aee324256b986049606c30c2f76f3fa2cf6ccf055e45914c744471523849901e",
+            "Sources/App/CloudSyncController.swift": "046dc96f2dfbb91db12c93453177cd17c15426af1ffef6e98482f8ec883f4be9",
+            "Sources/App/EventTap.swift": "6f133f8e87b74b9efb7de131b13f9c4aeb02126a8b0e610329df592ec53ac3cc",
+            "Sources/App/LaneSignal.swift": "e7e68ac41417ddd06e7049a7bd4e01a92d52305bc999cd6ddd323178c64a2ce8",
+            "Sources/App/Launcher.swift": "d3c17624c8f834dc41e1cfccaeef26f026f6da43587ac0e5c53cef1caeee17ae",
+            "Sources/App/PauseControl.swift": "fb1f56b9d5698e892690a67a6643f165020e55cc82ae5ed00838f225c36b726e",
+            "Sources/App/PickerPanel.swift": "eaa887dedba8504d48ec456799fba6abd84d72dea6522817b680d0ffc4f490ed",
+            "Sources/App/QuietMeasure.swift": "4c8ca6dada3acc610b2d61c535d60e6efb61e0fa037fe4b4fc8ff12c0a227d6c",
+            "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
+            "Sources/App/SettingsWindowController.swift": "85ef008d8dd62d5d475caff7cc6aa72ea848fb2683eee91db0d43dcd0c6e0777",
+            "Sources/App/Snapshot.swift": "743224e0d0b5dbc5f7451cc697ec9c91023b547e88e05fad88b4026a65c374b6",
+            "Sources/App/UISelfTest.swift": "9ea79605198fea96b91a86753df8d6ed5531a1e1905fefeb76f27915547a7217",
+            "Sources/App/main.swift": "78bf3886a74e3eb760b160201eccf3bec63b90d47d0aa84d02de5dbba1197272",
+            "Sources/CLI/main.swift": "ecf8e9b0bbecd647740fb688a93a4fa74763a9f975a3e5d108879baa3b4d8486",
+            "Sources/Shared/Actions.swift": "efd1e184580dd30061b84241f2189a5d731b3414d1f2bc7d9d1743bbac2e4b4f",
+            "Sources/Shared/AppCatalog.swift": "2469cb766fce48d73121fc1074c3a28cf0a186e51c10c22a20ec40140e2947dc",
+            "Sources/Shared/CloudSync.swift": "bbf35456c55d8704caee32d29d848fde0c0724258266f211a0e0480b3cb01d80",
+            "Sources/Shared/Config.swift": "556041a9783fb66882412641ded51804601fb5a558852f4da2230e2110a71df2",
+            "Sources/Shared/ConfigTransfer.swift": "8b647b224f10f05f5d4da538f25693aa5c3e52c43f1204eaa5912f25c53adb62",
+            "Sources/Shared/Decision.swift": "7b47b3353745e75f61ecf231767dcfd20bdc58cf0acd150a244e00bbefee85c7",
+            "Sources/Shared/Hammerspoon.swift": "e3a5c618b14b107a602b4f6ebec0aa2d88af378e435f0b6edea284c538fb7b51",
+            "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
+            "Sources/Shared/Lifecycle/AppConfiguration.swift": "ba4d6aa1f52966159e5b74b1ca2878734c61cad80355ace25e19c0f44626947f",
+            "Sources/Shared/Lifecycle/AppLifecycle.swift": "3033bc6f87a69a2402ff1cda2c8196a4abd677222582c75d21302a65626c2d89",
+            "Sources/Shared/Lifecycle/AppLifecycleCLI.swift": "f33393d954dac50331f4fd650066c6ecea573970d53b50b43e8a86cab708241c",
+            "Sources/Shared/Lifecycle/AppLifecycleUI.swift": "6107d9e91f26769341722667f7b1d4d85843ff2c03c159f3456541d756328614",
+            "Sources/Shared/Preview.swift": "ac832e0ef28ed02f8eabb49465b952d5f6bc5bd9bb111b6cc06226415d68a40f",
+            "Sources/Shared/Updates.swift": "fa8b922d86d04009609a1eeb008ae34c460346705180def0ee4cbb55afbd13ce",
+            "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
+          }
+        }
+      }
     }
   ],
   "measured_artifact": {
-    "version": "1.3.1",
-    "build": "10",
-    "executable_sha256": "42dc493d00f8ab456a2fc97313d4e56368b1f4090a3625531640015a1d4b29cf"
+    "version": "1.4.0",
+    "build": "13",
+    "executable_sha256": "b7e2ec3108d522b00b1335f4b12681b903ad81af5e411d58e383fd5d20cf2024"
   },
   "measurement_history": [
     {
@@ -711,19 +1141,17 @@
       "reason": "Replaced old-process measurement with actual installed 1.1.1 runtime, accessibility and event tap confirmed"
     }
   ],
-  "input_sha256": "4f459738af77a917d0134c871daebe17f1f6278fec52ed8a4c9b55abffda066d",
-  "data": "运行数据（空闲、就绪冷启动、字母面板）实测自本机装机的本地验收构建 1.3.1 (10)，构建回执已核对当前源码；下载大小取现有公开包 1.3.1 (8) 的 DMG。",
-  "data_en": "Runtime numbers (idle, ready cold launch, letter panel) were measured on the local acceptance build 1.3.1 (10) installed on this Mac, whose build receipt matches the current source; the download size is the DMG of the public package 1.3.1 (8).",
+  "input_sha256": "66a77252a6bac7f4885754870e274c08c7fda338d2869ecf2919c6ba29ab6485",
   "speed": {
-    "cold_launch_ms": 151.0,
+    "cold_launch_ms": 415.0,
     "runs": 5,
     "ready_signal": "os_log",
     "raw_ms": [
-      208.0,
-      151.0,
-      151.0,
-      179.0,
-      136.0
+      1139.0,
+      331.0,
+      383.0,
+      466.0,
+      415.0
     ],
     "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
   },
@@ -731,16 +1159,16 @@
     {
       "key": "cold_launch_to_ready",
       "label": "冷启动到首屏就绪",
-      "median_ms": 151.0,
+      "median_ms": 415.0,
       "runs": 5,
       "ready_signal": "os_log",
       "headline": true,
       "raw_ms": [
-        208.0,
-        151.0,
-        151.0,
-        179.0,
-        136.0
+        1139.0,
+        331.0,
+        383.0,
+        466.0,
+        415.0
       ],
       "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
     },
@@ -748,12 +1176,12 @@
       "key": "picker_offscreen_end_to_end",
       "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
       "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
-      "median_ms": 110.1,
+      "median_ms": 91.7,
       "runs": 7,
       "headline": false,
       "method": "已安装构建 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
-      "raw": "perf/raw/picker-operation-1.3.1-10.json",
-      "load": "负载均值 5.38 19.08 35.52；total = 2048.00M  used = 832.00M  free = 1216.00M"
+      "raw": "perf/raw/picker-operation-1.4.0-13.json",
+      "load": "负载均值 3.10 3.69 3.99；total = 5120.00M  used = 3713.94M  free = 1406.06M"
     }
   ],
   "idle": {
@@ -771,57 +1199,16 @@
     ],
     "window_s": 60,
     "settle_s": null,
-    "measured_at": "2026-10-07",
+    "measured_at": "2026-10-11",
     "method": "对原登记常驻实例直接采样； measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟；采样时本人在用电脑（被测 App 未在前台被使用，否则丢弃重采）",
-    "load": "负载均值 5.38 19.08 35.52；total = 2048.00M  used = 832.00M  free = 1216.00M",
-    "owner_idle_s_at_start": 90
+    "load": "负载均值 3.02 3.68 3.99；total = 5120.00M  used = 3713.94M  free = 1406.06M",
+    "owner_idle_s_at_start": 244
   },
   "runtime_measurement": {
     "environment": "native",
-    "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/b78ac9ba5fca45dd98613fd9b2cfbc96.raw.json",
-    "evidence_sha256": "85adff40c44075fb4f85ee84c3c7a092d1d472244869615ee83c46eef376333f",
-    "input_sha256": "4f459738af77a917d0134c871daebe17f1f6278fec52ed8a4c9b55abffda066d",
+    "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/7ebd540dda1f44f48de0b7e68b8f0d87.raw.json",
+    "evidence_sha256": "afbcebc92927f7dc5b19f4d168f2b91baca68c6dc58dab9baea76ac865f9a045",
+    "input_sha256": "66a77252a6bac7f4885754870e274c08c7fda338d2869ecf2919c6ba29ab6485",
     "ready_signal": "os_log"
-  },
-  "reused_for": {
-    "1.3.2 (11)": {
-      "display": "historical_only",
-      "measured_version": "1.3.1 (10)",
-      "measured_executable_sha256": "42dc493d00f8ab456a2fc97313d4e56368b1f4090a3625531640015a1d4b29cf",
-      "reviewed_at": "2026-10-07T22:19:08.693426+08:00",
-      "reason": "1.3.2 与被测的 1.3.1 (10) 程序源码相同，只改了版本号。运行数据沿用 1.3.1 (10) 当天的实测，仅供参考；其中的安装包大小是旧版安装包，1.3.2 的安装包大小以下载处为准。",
-      "reason_en": "1.3.2 is built from the same program source as the measured 1.3.1 (10); only the version number changed. Runtime numbers are the same-day 1.3.1 (10) measurement, for reference only; the package size listed with them is the older package, and the 1.3.2 package size is the one shown at the download link.",
-      "reviewed_sources_sha256": {
-        "Sources/App/AppDelegate.swift": "0d97fc0f45d463bceaff3290beb7747e861dd338f8f7832fde434d676d1ec441",
-        "Sources/App/CloudSyncController.swift": "046dc96f2dfbb91db12c93453177cd17c15426af1ffef6e98482f8ec883f4be9",
-        "Sources/App/EventTap.swift": "6f133f8e87b74b9efb7de131b13f9c4aeb02126a8b0e610329df592ec53ac3cc",
-        "Sources/App/LaneSignal.swift": "e7e68ac41417ddd06e7049a7bd4e01a92d52305bc999cd6ddd323178c64a2ce8",
-        "Sources/App/Launcher.swift": "aa826d20b2510e30f4bb8dafb8806a13860f7e3f17776d389a23a1a0e39d9f67",
-        "Sources/App/PauseControl.swift": "fb1f56b9d5698e892690a67a6643f165020e55cc82ae5ed00838f225c36b726e",
-        "Sources/App/PickerPanel.swift": "9ac0bccf1ee57e789416719bdc9a0093a76e61ab189784f86966049418412347",
-        "Sources/App/QuietMeasure.swift": "4c8ca6dada3acc610b2d61c535d60e6efb61e0fa037fe4b4fc8ff12c0a227d6c",
-        "Sources/App/Retina.swift": "496e874b81adb831c1ff25326fcdcd9966cf76b66b51d72efba6d1311ca9f512",
-        "Sources/App/SettingsWindowController.swift": "b6767c4c7b1a5921f7d92ea0351616acb3125bc20e6df4251d31f65e14756ddc",
-        "Sources/App/Snapshot.swift": "743224e0d0b5dbc5f7451cc697ec9c91023b547e88e05fad88b4026a65c374b6",
-        "Sources/App/UISelfTest.swift": "629df8a35c939fe897da7ca7e021009194870c6b4f0471df81e0cf19a35637af",
-        "Sources/App/main.swift": "78bf3886a74e3eb760b160201eccf3bec63b90d47d0aa84d02de5dbba1197272",
-        "Sources/CLI/main.swift": "7a2d90669cdf680aa6c3e14d7dd362fc16660667374059a4db4a75bbb17e87dc",
-        "Sources/Shared/AppCatalog.swift": "71330e6bcad7c48eee7746593542521b48bbc017a573bc896828cae52c1312cf",
-        "Sources/Shared/CloudSync.swift": "bbf35456c55d8704caee32d29d848fde0c0724258266f211a0e0480b3cb01d80",
-        "Sources/Shared/Config.swift": "fcd67af6e4fbec5035866d8bb65dadaec013e17e6b864c4da7b2e44c74ae53cd",
-        "Sources/Shared/ConfigTransfer.swift": "8fd68e4da3236af2c2b86f6e3a727f2587019feaf66fa3a34f004bfb1ba5d643",
-        "Sources/Shared/Decision.swift": "c81084bd930d6d6a741ebf9bfbf5f563ae3742586dbd3a101a5ba53dea2e8d3d",
-        "Sources/Shared/Hammerspoon.swift": "e3a5c618b14b107a602b4f6ebec0aa2d88af378e435f0b6edea284c538fb7b51",
-        "Sources/Shared/KeyEngine.swift": "9b8e4966981b47fbac6b0ff3351c12159092bc80782ef8a1cd139bd647f00603",
-        "Sources/Shared/Lifecycle/AppConfiguration.swift": "ba4d6aa1f52966159e5b74b1ca2878734c61cad80355ace25e19c0f44626947f",
-        "Sources/Shared/Lifecycle/AppLifecycle.swift": "3033bc6f87a69a2402ff1cda2c8196a4abd677222582c75d21302a65626c2d89",
-        "Sources/Shared/Lifecycle/AppLifecycleCLI.swift": "f33393d954dac50331f4fd650066c6ecea573970d53b50b43e8a86cab708241c",
-        "Sources/Shared/Lifecycle/AppLifecycleUI.swift": "fb946d731009b3a797427d706473cf8956c60d0a31a6ada287267f3acbdd7c34",
-        "Sources/Shared/Preview.swift": "80ce0b3990f04c512099e814ef256831652187d861badf979cb34c5f371780fb",
-        "Sources/Shared/Updates.swift": "fa8b922d86d04009609a1eeb008ae34c460346705180def0ee4cbb55afbd13ce",
-        "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
-      },
-      "verification": "git diff daa7bbc..7941a2f is empty for Sources, Resources, Tests and build.sh; Info.plist differs only in CFBundleShortVersionString 1.3.1 -> 1.3.2 and CFBundleVersion 10 -> 11. Not re-measured at release: another app_sop round held the lock and the 1-minute load was above 100."
-    }
   }
 }

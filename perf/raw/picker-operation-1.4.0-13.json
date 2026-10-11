@@ -1,0 +1,18 @@
+{
+  "version": "1.4.0 (13)",
+  "samples_ms": [
+    89.06541599571938,
+    90.1668750011595,
+    91.72150000085821,
+    94.98158300266368,
+    97.1878749987809,
+    92.16529200057266,
+    90.67570800107205
+  ],
+  "median_ms": 91.7,
+  "runs": 7,
+  "binary_sha256": "b7e2ec3108d522b00b1335f4b12681b903ad81af5e411d58e383fd5d20cf2024",
+  "method": "installed build --snapshot <png> --picker --right with isolated INITIALS_SUPPORT_DIR (copy of user config); production picker entries/fill/layout and Retina PNG export; 1 warmup + 7 runs; no event tap",
+  "load": "负载均值 3.10 3.69 3.99；total = 5120.00M  used = 3713.94M  free = 1406.06M",
+  "measured_at": "2026-10-11"
+}

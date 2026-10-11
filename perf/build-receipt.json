@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "built_at": "2026-10-07T22:13:27+08:00",
+  "built_at": "2026-10-09T23:06:59+08:00",
   "artifact": {
     "bundle_id": "cyou.tianli.initials",
     "version": "1.3.2",
-    "build": "11",
+    "build": "12",
     "executable": "Contents/MacOS/Initials",
-    "sha256": "fbc0cb81c053f57a332d0fe83f698cb092bd052325fe58ff2d9f4f4813682221",
+    "sha256": "6637b99d8c0732881bb60aea3423e74c23db38ccb5ab3159e16bc48d1db4b79f",
     "icon": {
       "path": "Contents/Resources/AppIcon.icns",
       "sha256": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154"
@@ -20,7 +20,7 @@
       "Info.plist",
       "build.sh"
     ],
-    "sha256": "002bb14cb2428471b3f7801ff2c599ca8d38102c238d79f6709b59aad4fb8aa8",
+    "sha256": "aae7a19e6bc5e07ea57d24a2d7287917e2f154f2a9324139b49e0ad63bc1519c",
     "file_count": 31,
     "files": {
       "Sources/App/LaneSignal.swift": "e7e68ac41417ddd06e7049a7bd4e01a92d52305bc999cd6ddd323178c64a2ce8",
@@ -40,7 +40,7 @@
       "Sources/Shared/ConfigTransfer.swift": "8fd68e4da3236af2c2b86f6e3a727f2587019feaf66fa3a34f004bfb1ba5d643",
       "Sources/Shared/Decision.swift": "c81084bd930d6d6a741ebf9bfbf5f563ae3742586dbd3a101a5ba53dea2e8d3d",
       "Sources/Shared/Lifecycle/AppConfiguration.swift": "ba4d6aa1f52966159e5b74b1ca2878734c61cad80355ace25e19c0f44626947f",
-      "Sources/Shared/Lifecycle/AppLifecycleUI.swift": "fb946d731009b3a797427d706473cf8956c60d0a31a6ada287267f3acbdd7c34",
+      "Sources/Shared/Lifecycle/AppLifecycleUI.swift": "6107d9e91f26769341722667f7b1d4d85843ff2c03c159f3456541d756328614",
       "Sources/Shared/Lifecycle/AppLifecycleCLI.swift": "f33393d954dac50331f4fd650066c6ecea573970d53b50b43e8a86cab708241c",
       "Sources/Shared/Lifecycle/AppLifecycle.swift": "3033bc6f87a69a2402ff1cda2c8196a4abd677222582c75d21302a65626c2d89",
       "Sources/Shared/Config.swift": "fcd67af6e4fbec5035866d8bb65dadaec013e17e6b864c4da7b2e44c74ae53cd",
@@ -52,10 +52,10 @@
       "Sources/CLI/main.swift": "7a2d90669cdf680aa6c3e14d7dd362fc16660667374059a4db4a75bbb17e87dc",
       "Resources/AppIcon.icns": "07622a2cda4f2c9ac1a5fe38990a64ef0d7e6dce5100f182a4b7b06743db6154",
       "Tests/main.swift": "4e276e0387d0a4b6bba5853ff2558c1e49a50f9f4463c0119d0f5222b5968fbd",
-      "Info.plist": "350059f1da7dbbd4e68293080f9625245cd3109ba24baaf577cdbacae173b96d",
+      "Info.plist": "37465d56ec74e32d67b4e065df7054e42e993bf18a8e62db2b34a23ad8df7282",
       "build.sh": "5376896e06fe37ddf04377a973d9c6255dc916a04d6b637edb48a398bcadc1fc"
     },
-    "commit": "7941a2f53642825a52cab3c8d644cd2efb8ad39d",
+    "commit": "11bfc69d2cf104d1081b3c26740b2ca36cd61907",
     "dirty_scope": "组件当前 Git 工作树；跨仓/软链输入的实际内容由 sha256 核验",
     "dirty": false
   },

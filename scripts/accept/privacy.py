@@ -167,7 +167,7 @@ def main():
     approved = {
         "AppLifecycle.swift": "3033bc6f87a69a2402ff1cda2c8196a4abd677222582c75d21302a65626c2d89",
         "AppConfiguration.swift": "ba4d6aa1f52966159e5b74b1ca2878734c61cad80355ace25e19c0f44626947f",
-        "AppLifecycleUI.swift": "fb946d731009b3a797427d706473cf8956c60d0a31a6ada287267f3acbdd7c34",
+        "AppLifecycleUI.swift": "6107d9e91f26769341722667f7b1d4d85843ff2c03c159f3456541d756328614",
         "AppLifecycleCLI.swift": "f33393d954dac50331f4fd650066c6ecea573970d53b50b43e8a86cab708241c",
     }
     for name, digest in approved.items():

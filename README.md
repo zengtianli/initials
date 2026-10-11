@@ -1,10 +1,12 @@
-# Initials · 一个键切到任何 app
+# Initials · 一个字母直达应用与动作
 
 **中文** | [English](README_EN.md)
 
 [官网、下载与安装教程](https://initials.tianli.cyou/) · [English website](https://initials.tianli.cyou/en/)
 
 按住 **⌘** 再按字母，瞬间切到、打开或隐藏对应的 app；快速**双击 ⌘**，弹出字母面板，再按字母切换。左右两个 ⌘ 各自可设，可以同时用。原生 macOS（Swift + AppKit），常驻菜单栏，附带同源 `initials` 命令行（给脚本和 agent 用）；实测占用见[资源占用](#资源占用)。
+
+字母也能绑定动作：显示 Downloads、打开或在 Finder 中选中最近下载的项目、打开最新截图、指定文件夹/文件/网址，以及运行 macOS 快捷指令。设置 → 添加… → 选择“应用或动作”。动作每次执行，不受“应用已在最前时隐藏”影响。
 
 ![左右 ⌘ 都可设置：按住 + 字母直达，双击弹出字母面板](site/assets/scene-keys-zh.png)
 
@@ -13,11 +15,11 @@
 
 | 安装包 | 空闲内存 | 空闲 CPU | 冷启动到首屏就绪 |
 |---|---|---|---|
-| **2.3 MB**（装好后 3.2 MB） | **16.8 MB** | **0%** | **151 ms** |
+| **2.5 MB**（装好后 3.4 MB） | **16.8 MB** | **0%** | **415 ms** |
 
 纯 AppKit，零第三方依赖；按键由系统事件回调送达，回调里只做几次比较，切换动作放到回调外执行；配置改动由 kqueue 通知、不轮询，仅每 30 秒确认一次按键监听仍开着。
 
-<sub>v1.3.1 (10) · Mac16,12 / Apple M4 / macOS 27.2 · 运行数据（空闲、就绪冷启动、字母面板）实测自本机装机的本地验收构建 1.3.1 (10)，构建回执已核对当前源码；下载大小取现有公开包 1.3.1 (8) 的 DMG。 · 2026-10-07。数字来自所列设备实测，版本更新后重新测量。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
+<sub>v1.4.0 (13) · Mac16,12 / Apple M4 / macOS 27.2 · 2026-10-11。数字来自所列版本与设备的测量记录；当前版本与测量范围以本页说明为准。内存口径为 phys_footprint；CPU 为 60 秒采样窗内 CPU 时间 ÷ 墙钟；大小按十进制 MB。原始数据见 [perf/lightweight.json](perf/lightweight.json)。</sub>
 <!-- lightweight:end -->
 
 ## 用法
@@ -26,12 +28,32 @@
 
 - **按住 ⌘ + 字母**：
   - 指定了 app 的字母：没开就启动，开着就切过去；已在最前就隐藏，再按一次切回来。
+  - 绑定了动作的字母：直接执行对应动作；双击面板同样显示动作名称与图标。
   - 右 ⌘ 没指定的字母：在名字以它开头、正在运行的 app 之间轮换。
   - 左 ⌘ 只接管字母表里指定过的字母，⌘C、⌘V 等照常；如果指定的字母占了常用快捷键，设置窗和 `initials list` 会提示。
   - 同时按 ⇧⌥⌃ 的组合照常放行；两个 ⌘ 同时按住时以右 ⌘ 为准。
 - **双击 ⌘，再按字母**：屏幕中间弹出这一边的字母面板，不抢当前窗口焦点；Esc 或 4 秒不按键自动关闭。两下之间按了别的键、点了鼠标、按住太久或左右各按一下都不算双击。
 - 左右各有一张字母表；默认左边沿用右边的表，可以在设置里分开。
-- **设置**（菜单栏 ⌘ 图标 → 设置）：⌘1/⌘2 切换右 ⌘ / 左 ⌘，⌘N 添加，⌫ 移除，↩ 换 app，⌘W 关闭。可一键“从 Hammerspoon 导入”已有的 right_command 映射；旧版 MacKit 仍带 rcmd 模块时，设置窗还会提供“关闭 Hammerspoon rcmd”。
+- **设置**（菜单栏 ⌘ 图标 → 设置）：⌘1/⌘2 切换右 ⌘ / 左 ⌘，⌘N 添加，⌫ 移除，↩ 修改应用或动作，⌘W 关闭。可一键“从 Hammerspoon 导入”已有的 right_command 映射；旧版 MacKit 仍带 rcmd 模块时，设置窗还会提供“关闭 Hammerspoon rcmd”。
+
+## 常用动作
+
+“最近下载”指 Downloads 顶层中最近加入的完整项目，加入时间不可用时使用创建时间；隐藏文件和 `.download`、`.crdownload`、`.part` 等未完成文件会跳过。打开时使用默认应用；“在 Finder 中选中”只显示该项目。最新截图从系统设置的截图目录查找，默认是桌面；按截图元数据或系统默认截图文件名识别。目录为空、目标丢失或执行失败时显示短暂提示，不抢键盘焦点。
+
+```bash
+initials actions --json
+initials bind g show-downloads
+initials bind o open-last-download
+initials bind r reveal-last-download
+initials bind p open-last-screenshot
+initials bind j open-folder ~/Work
+initials bind k open-file ~/Work/report.pdf
+initials bind u open-url https://example.com
+initials bind q run-shortcut "我的快捷指令"
+initials preview g o r p --json   # 查看当前目标，不执行
+```
+
+这些字母只是配置示例，可改成自己习惯的字母。文件夹和文件可用 `~/` 路径，随配置迁移时仍指向本机主目录；快捷指令需要在每台 Mac 上已有同名指令。旧应用绑定仍然保留，动作也参与导出、导入和 iCloud 同步。
 
 ## 安装
 

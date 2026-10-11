@@ -23,6 +23,37 @@ def run(args, *, env=None, expected=0):
     return result
 
 def ensure_build():
+    # Explicit reuse is a real product run, not a new build: Chapter must prove
+    # this exact app still matches its receipt and all current source inputs.
+    # Keep compilation (including the shared-source check) as the default.
+    if os.environ.get("INITIALS_ACCEPT_APP"):
+        app = Path(os.environ["INITIALS_ACCEPT_APP"]).expanduser().resolve()
+        engine = ROOT.parent / "chapter/engine"
+        python = Path.home() / "Dev/.venv/bin/python"
+        verification = run([python, "-c", """
+import json, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from app_sop import load_apps, verify_build_receipt
+root, bundle = map(Path, sys.argv[2:4])
+apps = [a for a in load_apps('initials-mac') if a['id'] == 'initials-mac'
+        and Path(a['repo']).resolve() == root.resolve()]
+if len(apps) != 1:
+    raise SystemExit('Current Initials registration could not be verified')
+valid, reason = verify_build_receipt(apps[0], bundle)
+print(json.dumps({'valid': valid, 'reason': reason}, ensure_ascii=False))
+if not valid:
+    raise SystemExit(1)
+""", engine, ROOT, app])
+        proof = json.loads(verification.stdout)
+        if proof.get("valid") is not True:
+            raise AssertionError("Explicit app reuse lacks a valid build receipt")
+        run(["/usr/bin/codesign", "--verify", "--deep", "--strict", app])
+        cli, gui = app / "Contents/Resources/bin/initials", app / "Contents/MacOS/Initials"
+        if not cli.is_file() or not gui.is_file():
+            raise AssertionError("Verified app is missing the bundled CLI or GUI")
+        print("Reused verified app: " + proof["reason"])
+        return cli, gui
     BUILD.mkdir(parents=True, exist_ok=True)
     with (BUILD / ".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)

@@ -3,18 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Initials · 一个键切到任何 app</title>
+<title>Initials · 首键：一个字母直达应用与动作</title>
 <meta name="description" content="Initials：按住 ⌘ 再按字母，瞬间切到、打开或隐藏对应 app；左右 ⌘ 都能设，双击 ⌘ 弹出字母面板。原生 macOS，约 {{LW_MEMORY}} MB 内存，开源免费。">
 <link rel="canonical" href="{{CANONICAL}}">
 <link rel="alternate" hreflang="zh-CN" href="https://initials.tianli.cyou/">
 <link rel="alternate" hreflang="en" href="https://initials.tianli.cyou/en/">
 <link rel="alternate" hreflang="x-default" href="https://initials.tianli.cyou/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Initials · 一个键切到任何 app">
+<meta property="og:title" content="Initials · 首键：一个字母直达应用与动作">
 <meta property="og:description" content="给常用 app 各指定一个字母。原生 macOS 菜单栏工具，免费、MIT 开源，无需联网。">
 <meta property="og:url" content="{{CANONICAL}}">
 <meta property="og:locale" content="{{OG_LOCALE}}">
 <meta property="og:image" content="https://initials.tianli.cyou/assets/icon.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Initials · 首键：一个字母直达应用与动作">
+<meta name="twitter:description" content="给常用 app 各指定一个字母。原生 macOS 菜单栏工具，免费、MIT 开源，无需联网。">
+<meta name="twitter:image" content="https://initials.tianli.cyou/assets/icon.png">
 <link rel="icon" href="assets/icon.png">
 <style>
 :root{color-scheme:light;--ink:#22303a;--muted:#5d6b75;--accent:#1d7a78;--accent-dark:#155f5d;--coral:#d9654f;--line:#dde6e8;--paper:#f7faf9;--card:#fff;--soft:#e8f2f1;--radius:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
@@ -93,7 +97,7 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px;border
 footer strong{color:var(--ink)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 @media(max-width:900px){.hero,.modes,.shots,.video-grid{grid-template-columns:1fr;gap:28px}.strip{grid-template-columns:1fr 1fr}.topbar nav{gap:14px}.video-card{max-width:680px;margin-inline:auto;width:100%}}
-@media(max-width:640px){.wrap{width:calc(100% - 32px)}.topbar{padding:10px 16px;flex-wrap:wrap;gap:8px}.topbar nav{order:3;width:100%;flex-wrap:wrap;justify-content:flex-start;margin:0;font-size:13px}.topbar .button{margin-left:auto}.hero{padding-block:34px}.lead{font-size:16px}.stage{padding:16px}.section{padding-block:50px}.strip{grid-template-columns:1fr;gap:16px}.mode{padding:20px}.steps li{grid-template-columns:1fr;gap:4px;padding:18px}table{font-size:12px}th,td{padding:8px}.compare-wrap{overflow-x:auto}}
+@media(max-width:640px){.wrap{width:calc(100% - 32px)}.topbar{padding:10px 16px;flex-wrap:wrap;gap:8px}.topbar nav{order:3;width:100%;flex-wrap:wrap;justify-content:flex-start;margin:0;font-size:13px}.topbar .button{margin-left:auto}.hero{padding-block:34px}.lead{font-size:16px}.stage{padding:16px}.section{padding-block:50px}.strip{grid-template-columns:1fr;gap:16px}.mode{padding:20px}.steps li{grid-template-columns:1fr;gap:4px;padding:18px}table{font-size:12px;min-width:680px}th,td{padding:8px}th:first-child,td:first-child{white-space:nowrap}.compare-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head>
@@ -101,14 +105,14 @@ footer strong{color:var(--ink)}
 <a class="skip" href="#how">跳到用法</a>
 <header class="topbar">
   <a class="brand" href="#"><img src="assets/icon.png" alt="" width="32" height="32"><span>Initials</span></a>
-  <nav aria-label="主导航"><a href="#how">用法</a><a href="#settings">设置</a><a href="#demo">看导览</a><a href="#install">安装</a><a href="#help">问题</a><a class="language-switch" href="/en/" lang="en">English</a></nav>
+  <nav aria-label="主导航"><a href="#how">用法</a><a href="#settings">设置</a><a href="#install">安装</a><a href="#demo">看导览</a><a href="#help">问题</a><a class="language-switch" href="/en/index.html" lang="en">English</a></nav>
   <a class="button small" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>下载 <span aria-hidden="true">↓</span></a>
 </header>
 
 <main>
-<section class="hero wrap">
+<section id="hero" class="hero wrap">
   <div>
-    <p class="eyebrow">MAC 切换 APP · 原生 · 开源</p>
+    <p class="eyebrow">MAC 应用与动作 · 原生 · 开源</p>
     <h1>按住右 ⌘，<br>按字母，<em>就到了。</em></h1>
     <p class="lead">给常用 app 各指定一个字母。<kbd>右⌘</kbd>+<kbd>M</kbd> 切到音乐，再按一次就隐藏。不用找 Dock，也不用在 ⌘Tab 里一个个翻。左边的 ⌘ 也能按住直达，或者快速按两下弹出字母面板，看一眼就知道按哪个。</p>
     <div class="hero-actions">
@@ -124,10 +128,8 @@ footer strong{color:var(--ink)}
   </div>
 </section>
 
-{{LIGHTWEIGHT}}
-<p class="wrap note">引擎微基准：约 6 ns/次（build.sh 内置基准），只计纯状态机的按键判断，不含事件分发、应用启动或切换；实际操作延迟未测。</p>
-
-<section id="how" class="section wrap">
+<section id="features">
+<div id="how" class="section wrap">
   <div class="section-title">
     <p class="eyebrow">两种用法 · 左右都能用</p>
     <h2>按住直达，双击看着选。</h2>
@@ -155,9 +157,26 @@ footer strong{color:var(--ink)}
       </ul>
     </article>
   </div>
-</section>
+</div>
 
-<section id="settings" class="section alt">
+<div id="actions" class="section wrap">
+  <div class="section-title">
+    <p class="eyebrow">字母绑定</p>
+    <h2>一个字母，也能执行一个动作。</h2>
+    <p>显示 Downloads、打开最近下载的项目、在 Finder 中选中最近下载、打开最新截图。也能打开指定文件夹、文件和网址，或运行已有的 macOS 快捷指令。</p>
+    <p>设置 → 添加… → 选择应用或动作，再挑一个字母。动作每次执行；应用仍按原来的切换与隐藏规则工作。</p>
+  </div>
+  <div class="shots">
+    <figure><img class="scene" src="assets/binding-action-zh.png" alt="字母绑定编辑器：选择打开最近下载项" width="520" height="230" loading="lazy"><figcaption>打开最近下载项：用默认应用直接打开最近加入 Downloads 的完整项目。</figcaption></figure>
+    <div><p>最近下载按加入目录的时间选择，时间不可用时按创建时间；跳过隐藏文件和未完成下载。最新截图使用系统截图目录，默认是桌面。</p><p>动作可随配置导出、导入和 iCloud 同步。文件夹与文件支持 ~/ 路径；快捷指令需在每台 Mac 上已有同名指令。</p><pre><code>initials bind g show-downloads
+initials bind o open-last-download
+initials bind r reveal-last-download
+initials bind p open-last-screenshot
+initials preview g o r p --json</code></pre></div>
+  </div>
+</div>
+
+<div id="settings" class="section alt">
   <div class="wrap">
     <div class="section-title">
       <p class="eyebrow">设置</p>
@@ -167,11 +186,11 @@ footer strong{color:var(--ink)}
     </div>
     <div class="shots">
       <div>
-        <figure><img class="scene" src="assets/scene-settings-right-zh.png" alt="Initials 设置：右 ⌘ 的两个开关和字母表，C Calendar、F Finder、M Music 等" width="760" height="757" loading="lazy"><figcaption>右 ⌘：勾选“按住”和/或“双击”。“添加…”选 app 并挑字母；“从 Hammerspoon 导入”可以一次导入已有的 rcmd 映射。</figcaption></figure>
-        <figure style="margin-top:22px"><img class="scene" src="assets/scene-settings-left-zh.png" alt="Initials 设置：左 ⌘ 按住和双击都打开，单独一张字母表 J Photos、K Keynote、Y Weather" width="760" height="798" loading="lazy"><figcaption>左 ⌘：按住和双击都打开，用单独的字母表，避开 ⌘C、⌘V 这些常用键。</figcaption></figure>
+        <figure><img class="scene" src="assets/settings-right-zh.png" alt="Initials 设置：右 ⌘ 的两个开关和字母表，C Calendar、F Finder、M Music 等" width="620" height="720" loading="lazy"><figcaption>右 ⌘：勾选“按住”和/或“双击”。“添加…”选 app 并挑字母；“从 Hammerspoon 导入”可以一次导入已有的 rcmd 映射。</figcaption></figure>
+        <figure style="margin-top:22px"><img class="scene" src="assets/settings-left-zh.png" alt="Initials 设置：左 ⌘ 按住和双击都打开，单独一张字母表 J Photos、K Keynote、Y Weather" width="620" height="740" loading="lazy"><figcaption>左 ⌘：按住和双击都打开，用单独的字母表，避开 ⌘C、⌘V 这些常用键。</figcaption></figure>
       </div>
       <div>
-        <figure><img class="scene" src="assets/scene-picker-dark-zh.png" alt="深色模式下浮在窗口上的字母面板" width="1100" height="720" loading="lazy"><figcaption>字母面板跟随系统深浅色。</figcaption></figure>
+        <figure><img class="scene" src="assets/picker-dark-zh.png" alt="深色模式下浮在窗口上的字母面板" width="560" height="270" loading="lazy"><figcaption>字母面板跟随系统深浅色。</figcaption></figure>
         <ul class="note" style="font-size:14px;line-height:1.9;padding-left:18px;margin-top:22px">
           <li><strong>左右 ⌘ 各两个开关</strong>：“按住 + 字母”和“双击弹面板”，可以只开一个，也可以都开。</li>
           <li><strong>按下的 app 已在最前时隐藏它</strong>：再按一次切回来，和 rcmd 的习惯相同。</li>
@@ -182,12 +201,12 @@ footer strong{color:var(--ink)}
       </div>
     </div>
   </div>
-</section>
+</div>
 
-<section id="compare" class="section wrap">
+<div id="compare" class="section wrap">
   <div class="section-title">
     <p class="eyebrow">和同类工具比</p>
-    <h2>只做切 app 这一件事。</h2>
+    <h2>字母直达，保持简单。</h2>
     <p>2026-09-24 核对各项目官方说明；资源占用只列了 Initials 自己的实测，不代表跨产品性能比较。</p>
   </div>
   <div class="compare-wrap">
@@ -196,16 +215,19 @@ footer strong{color:var(--ink)}
     <tbody>
       <tr><td>怎么切</td><td class="me">左右 ⌘ 都可：按住 + 字母直达、双击弹面板，可同时开</td><td>右 ⌘ + 字母</td><td>按右 ⌘ 弹面板，再按字母</td><td>右 ⌥ + 字母</td><td>每个 app 单独录一个组合键</td></tr>
       <tr><td>没指定的字母</td><td class="me">在同首字母的运行中 app 间轮换</td><td>按首字母</td><td>按首字母</td><td>临时分配给运行中的 app</td><td>—</td></tr>
-      <tr><td>另外的功能</td><td class="me">命令行；从 Hammerspoon 导入</td><td>见其官网</td><td>屏幕文字搜索、Vimium 式点击、滚动模式</td><td>提示面板</td><td>—</td></tr>
+      <tr><td>另外的功能</td><td class="me">文件与下载动作；网址与快捷指令；同源命令行</td><td>见其官网</td><td>屏幕文字搜索、Vimium 式点击、滚动模式</td><td>提示面板</td><td>—</td></tr>
       <tr><td>源码</td><td class="me">开源 · MIT</td><td>见其官网</td><td>开源 · Apache-2.0</td><td>公开源码</td><td>开源 · MIT</td></tr>
     </tbody>
   </table>
   </div>
-  <p class="note">适合想要一个极轻、只管切 app 的工具的人。想要屏幕文字搜索、键盘点击这类更多功能，可以看 OctoCmd。</p>
+  <p class="note">适合用字母直达常用应用、文件位置和操作的人。</p>
+</div>
 </section>
 
-<section id="install" class="section alt">
-  <div class="wrap">
+{{LIGHTWEIGHT}}
+
+<section id="start">
+  <div id="install" class="section alt"><div class="wrap">
     <div class="section-title">
       <p class="eyebrow">安装</p>
       <h2>三步，第二步要授权一次。</h2>
@@ -216,51 +238,13 @@ footer strong{color:var(--ink)}
       <li><span class="n">2</span><div><h3>允许“辅助功能”</h3><p>第一次打开会显示设置窗口。点 <strong>打开辅助功能设置…</strong>，在“系统设置 › 隐私与安全性 › 辅助功能”里打开 Initials 的开关。回到设置窗口，顶部变成 <strong>✓ 已授权辅助功能，正在工作</strong> 就好了，不用重启。</p><p>为什么需要它：Initials 要接到 ⌘ + 字母，并且不让这个按键再传给当前 app。它只看 ⌘ 和紧跟的字母，不记录、不保存你打的字。</p></div></li>
       <li><span class="n">3</span><div><h3>给字母指定 app</h3><p>点 <strong>添加…</strong> 选 app 并挑字母。已经在用 Hammerspoon rcmd 的，点 <strong>从 Hammerspoon 导入</strong>，确认好用之后再点 <strong>关闭 Hammerspoon rcmd</strong>，免得两边同时处理同一个键。</p></div></li>
     </ol>
-  </div>
-</section>
-
-<section id="demo" class="section wrap">
-  <div class="section-title">
-    <p class="eyebrow">三个功能片段 · 中文步骤字幕</p>
-    <h2>先认清界面，<br>再设成自己的习惯。</h2>
-    <p>从右侧字母表，到字母面板，再到左侧独立配置。每段可以暂停、拖动、全屏或下载；静音，无须打开声音。</p>
-  </div>
-  <p class="guide-note"><strong>真实界面离屏导览，示例配置；非连续实机录屏。</strong>画面由 Initials 1.1.0 的原生视图离屏渲染，只含 Apple 应用，并配有标注的局部放大。它说明设置与面板，不演示真实全局切换、隐藏应用或辅助功能授权成功。</p>
-  <div class="video-grid">
-    <article class="video-card">
-      <video controls playsinline preload="none" poster="media/right.jpg" aria-label="右 Command 字母表离屏导览">
-        <source src="media/right.mp4" type="video/mp4">
-        <track kind="captions" src="media/right.vtt" srclang="zh" label="中文">
-        你的浏览器不支持视频，请使用下方下载链接。
-      </video>
-      <div class="video-copy"><h3>01 · 右 ⌘ 的字母表</h3><p>18 秒 · 看懂字母与 app 的对应关系，以及按住、双击两个开关。</p><a href="media/right.mp4" download>下载这一段 ↓</a></div>
-    </article>
-    <article class="video-card">
-      <video controls playsinline preload="none" poster="media/panel.jpg" aria-label="字母面板明暗色离屏导览">
-        <source src="media/panel.mp4" type="video/mp4">
-        <track kind="captions" src="media/panel.vtt" srclang="zh" label="中文">
-        你的浏览器不支持视频，请使用下方下载链接。
-      </video>
-      <div class="video-copy"><h3>02 · 看懂字母面板</h3><p>14 秒 · 对照字母、应用名称和底部提示，查看浅色与深色界面。</p><a href="media/panel.mp4" download>下载这一段 ↓</a></div>
-    </article>
-    <article class="video-card">
-      <video controls playsinline preload="none" poster="media/left.jpg" aria-label="左 Command 独立字母表离屏导览">
-        <source src="media/left.mp4" type="video/mp4">
-        <track kind="captions" src="media/left.vtt" srclang="zh" label="中文">
-        你的浏览器不支持视频，请使用下方下载链接。
-      </video>
-      <div class="video-copy"><h3>03 · 左 ⌘ 单独一张表</h3><p>18 秒 · 了解共用选项和独立字母表。本例仅用 J、K、Y，不占用 C、V。</p><a href="media/left.mp4" download>下载这一段 ↓</a></div>
-    </article>
-  </div>
-  <div class="guide-links"><a href="media/tutorial.mp4" download>下载完整三段导览（50 秒）↓</a><a href="media/tutorial.vtt" download>下载中文字幕</a><a href="media/guide.json">查看素材版本与范围</a></div>
-</section>
-
-<section id="cli" class="section wrap">
-  <div class="section-title">
-    <p class="eyebrow">命令行</p>
-    <h2>和设置窗口改的是同一份配置。</h2>
-    <p>安装后命令在 <code>/Applications/Initials.app/Contents/Resources/bin/initials</code>，可以链接到自己的 PATH 里。改完即时生效。</p>
-  </div>
+  </div></div>
+  <div id="cli" class="section wrap">
+    <div class="section-title">
+      <p class="eyebrow">命令行</p>
+      <h2>和设置窗口改的是同一份配置。</h2>
+      <p>安装后命令在 <code>/Applications/Initials.app/Contents/Resources/bin/initials</code>，可以链接到自己的 PATH 里。改完即时生效。</p>
+    </div>
 <pre><code>initials list                      # 两边的字母表
 initials set m Music               # 右 ⌘ + M → 音乐（名字、bundle id 或 .app 路径都行）
 initials set w WeChat --side left  # 只给左 ⌘ 设（先 initials share off）
@@ -270,7 +254,44 @@ initials status                    # 是否在运行、是否已授权、是否�
 initials hold on --side left       # 左 ⌘ 也按住 + 字母直达（只接管指定过的字母）
 initials tap on --side right       # 右 ⌘ 也能双击弹面板
 initials tap off --side left       # 关掉双击左 ⌘</code></pre>
-  <p class="note">退出码：0 成功，1 没找到，2 用法错误，3 Initials 没在运行（status）。配置文件：<code>~/Library/Application Support/cyou.tianli.initials/config.json</code>。</p>
+    <p class="note">退出码：0 成功，1 没找到，2 用法错误，3 Initials 没在运行（status）。配置文件：<code>~/Library/Application Support/cyou.tianli.initials/config.json</code>。</p>
+  </div>
+</section>
+
+<section id="watch" class="section wrap">
+  <div id="demo" class="section-title">
+    <p class="eyebrow">三个功能片段 · 中文步骤字幕</p>
+    <h2>先认清界面，<br>再设成自己的习惯。</h2>
+    <p>从右侧字母表，到字母面板，再到左侧独立配置。每段可以暂停、拖动、全屏或下载；静音，无须打开声音。</p>
+  </div>
+  <p class="guide-note"><strong>真实界面离屏导览，示例配置；非连续实机录屏。</strong>画面由 Initials 1.1.0 的原生视图离屏渲染，只含 Apple 应用，并配有标注的局部放大。它说明设置与面板，不演示真实全局切换、隐藏应用或辅助功能授权成功。</p>
+  <div class="video-grid">
+    <article class="video-card">
+      <video controls playsinline preload="none" poster="media/right.jpg" aria-label="右 Command 字母表离屏导览">
+        <source src="media/right.mp4" type="video/mp4">
+        <track kind="captions" src="media/right.vtt" srclang="zh" label="中文" default>
+        你的浏览器不支持视频，请使用下方下载链接。
+      </video>
+      <div class="video-copy"><h3>01 · 右 ⌘ 的字母表</h3><p>18 秒 · 看懂字母与 app 的对应关系，以及按住、双击两个开关。</p><a href="media/right.mp4" download>下载这一段 ↓</a></div>
+    </article>
+    <article class="video-card">
+      <video controls playsinline preload="none" poster="media/panel.jpg" aria-label="字母面板明暗色离屏导览">
+        <source src="media/panel.mp4" type="video/mp4">
+        <track kind="captions" src="media/panel.vtt" srclang="zh" label="中文" default>
+        你的浏览器不支持视频，请使用下方下载链接。
+      </video>
+      <div class="video-copy"><h3>02 · 看懂字母面板</h3><p>14 秒 · 对照字母、应用名称和底部提示，查看浅色与深色界面。</p><a href="media/panel.mp4" download>下载这一段 ↓</a></div>
+    </article>
+    <article class="video-card">
+      <video controls playsinline preload="none" poster="media/left.jpg" aria-label="左 Command 独立字母表离屏导览">
+        <source src="media/left.mp4" type="video/mp4">
+        <track kind="captions" src="media/left.vtt" srclang="zh" label="中文" default>
+        你的浏览器不支持视频，请使用下方下载链接。
+      </video>
+      <div class="video-copy"><h3>03 · 左 ⌘ 单独一张表</h3><p>18 秒 · 了解共用选项和独立字母表。本例仅用 J、K、Y，不占用 C、V。</p><a href="media/left.mp4" download>下载这一段 ↓</a></div>
+    </article>
+  </div>
+  <div class="guide-links"><a href="media/tutorial.mp4" download>下载完整三段导览（50 秒）↓</a><a href="media/tutorial.vtt" download>下载中文字幕</a><a href="media/guide.json">查看素材版本与范围</a></div>
 </section>
 
 <section id="help" class="section alt">
@@ -288,14 +309,14 @@ initials tap off --side left       # 关掉双击左 ⌘</code></pre>
     <details><summary>换 Mac 后怎样恢复配置</summary><p>两台 Mac 使用同一 Apple ID、开启 iCloud Drive，并在 Initials 设置中选择同步，配置会保存到 iCloud Drive 的 Initials/config.json。同步等待系统传输，切换应用仍用本机配置。也可从旧 Mac 导出配置，在新 Mac 导入；辅助功能授权和登录项需要在新机器单独设置。</p></details>
     <details><summary>怎样升级 App</summary><p>在菜单栏或设置中点“检查更新…”，有新版可在窗口内升级。下载后会校验安装包、App 身份和开发者签名；配置保留，替换失败会回滚。</p></details>
     <details><summary>网站会跟踪我的使用吗</summary><p>本页没有第三方追踪脚本，不设置分析 Cookie。服务器保留正常访问日志，并汇总页面访问与下载请求，用于运行维护和推广评估；这些汇总不识别跨会话用户，也不跟踪应用内的使用。</p></details>
-    <details><summary>怎样反馈问题</summary><p>在 <a href="https://github.com/zengtianli/initials/issues">GitHub Issues</a> 描述 macOS 版本、Initials 版本、相关开关和复现步骤。请勿贴出私密输入或完整个人配置。</p></details>
+    <details><summary>怎样反馈问题</summary><p>在 <a href="https://github.com/zengtianli/initials/issues">GitHub Issues · 反馈</a> 描述 macOS 版本、Initials 版本、相关开关和复现步骤。请勿贴出私密输入或完整个人配置。</p></details>
   </div>
 </section>
 
-<section class="cta wrap">
+<section id="get" class="cta wrap">
   <img src="assets/icon.png" alt="Initials 图标" width="84" height="84">
   <h2>给常用的 app 各分一个字母。</h2>
-  <p>免费、开源、不联网。</p>
+  <p>免费、开源，离线可用。</p>
   <a class="button" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>下载 v{{VERSION}} <span aria-hidden="true">↓</span></a>
   <p class="fine">SHA-256：<code>{{SHA256}}</code></p>
 </section>
@@ -303,15 +324,8 @@ initials tap off --side left       # 关掉双击左 ⌘</code></pre>
 
 <footer class="wrap">
   <div><strong>Initials</strong> · 由 <a href="https://github.com/zengtianli">zengtianli</a> 维护 · MIT 开源</div>
-  <div><a href="https://github.com/zengtianli/initials">源代码</a> · <a class="language-switch" href="/en/" lang="en">English</a></div>
+  <div><a href="https://github.com/zengtianli/initials">源代码</a> · <a class="language-switch" href="/en/index.html" lang="en">English</a></div>
   <div>无第三方追踪脚本、分析 Cookie 或外部字体。访问日志说明见常见问题。</div>
 </footer>
-<script>
-for (const video of document.querySelectorAll('video')) {
-  video.addEventListener('play', () => {
-    for (const other of document.querySelectorAll('video')) if (other !== video) other.pause();
-  });
-}
-</script>
 </body>
 </html>

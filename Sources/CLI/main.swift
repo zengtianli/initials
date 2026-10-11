@@ -30,9 +30,14 @@ let commandTable: [(String, Command)] = [
                      details: "JSON per side: enabled, hold, doubleTap, effectiveHold, effectiveDoubleTap, hideIfFrontmost,\ncycleUnbound, useRightBindings, editable, conflicts [{letter, shortcut}], bindings {letter: {name,\nbundleID, path, found, resolvedPath}}; top level adds config, doubleTapSeconds, pickerTimeoutSeconds.",
                      options: ["--side"])),
     ("preview", Command(usage: "initials preview [<letter>…] [--side right|left] [--json]",
-                        about: "What each letter would do right now (open, activate, hide or nothing), without doing it.",
-                        details: "No letters: every letter the double-tap panel would show. Uses the running apps and the app in front.",
+                        about: "What each letter would do right now, without doing it (apps and actions).",
+                        details: "No letters: every letter the double-tap panel would show. Uses running apps and the app in front.\nActions also report resolvedTarget, resolvedAction and available; unavailable targets include error.\nPreview only resolves targets: it never opens, reveals or runs them.",
                         positional: 0...26, options: ["--side"])),
+    ("actions", Command(usage: "initials actions [--json]", about: "List built-in actions and their target requirements.")),
+    ("bind", Command(usage: "initials bind <letter> <action> [<target>] [--side right|left] [--dry-run] [--json]",
+                    about: "Bind an action to a letter (list identifiers with `initials actions`).",
+                    details: "show-downloads, open-last-download, reveal-last-download, open-last-screenshot take no target.\nopen-folder and open-file take an absolute or ~/ path; open-url takes a full URL or deep link;\nrun-shortcut takes the name of an existing macOS shortcut. Only configuration is edited: nothing is opened or run.\nUse preview to resolve the current target without executing. Left shared letters are edited on the right.",
+                    positional: 2...3, options: ["--side", "--dry-run"])),
     ("status", Command(usage: "initials status [--json]",
                        about: "Is the app running, allowed Accessibility, intercepting, paused, active?",
                        details: "Exit 3 when Initials is not running (JSON is still printed, with ok false).")),
@@ -132,11 +137,11 @@ let commands = Dictionary(uniqueKeysWithValues: commandTable)
 /// Commands that both read and write appear once in each group, with the form that does it.
 func usageLines(_ names: [String]) -> String { names.map { "  " + commands[$0]!.usage }.joined(separator: "\n") }
 let usage = """
-initials — pin apps to letters; hold either ⌘ + letter, or double-tap a ⌘ then a letter
+initials — bind apps or actions to letters; hold either ⌘ + letter, or double-tap a ⌘ then a letter
 The Settings window and the menu-bar item for scripts and agents: same config.json, same code as the window.
 
 Read (never write a file, change state, open a window or ask for a permission):
-\(usageLines(["status", "list", "preview"]))
+\(usageLines(["status", "list", "preview", "actions"]))
   initials login [--json]
   initials sync [status] [--json]
 \(usageLines(["updates"]))
@@ -144,7 +149,7 @@ Read (never write a file, change state, open a window or ask for a permission):
 \(usageLines(["path", "version"]))
 
 Write config.json (the running app and the Settings window follow at once; --dry-run saves nothing):
-\(usageLines(["set", "unset", "move", "import", "enable", "disable", "hold", "tap", "cycle", "hide-front", "share"]))
+\(usageLines(["set", "bind", "unset", "move", "import", "enable", "disable", "hold", "tap", "cycle", "hide-front", "share"]))
 
 Write elsewhere (the running app, the installed app itself, this Mac's login items, iCloud Drive, a file you name, Hammerspoon):
 \(usageLines(["pause", "resume", "quit"]))
@@ -286,6 +291,11 @@ func loadConfig() -> Config {
 }
 
 func bindingJSON(_ b: Binding) -> [String: Any] {
+    if let action = b.action {
+        return ["name": b.name, "title": b.displayName, "kind": "action",
+                "action": ["kind": action.kind.rawValue, "target": action.target as Any? ?? NSNull()],
+                "bundleID": NSNull(), "path": action.target as Any? ?? NSNull(), "found": true, "resolvedPath": NSNull()]
+    }
     let url = AppCatalog.url(for: b)
     return ["name": b.name, "bundleID": b.bundleID as Any? ?? NSNull(), "path": b.path as Any? ?? NSNull(),
             "found": url != nil, "resolvedPath": url?.path as Any? ?? NSNull()]
@@ -441,6 +451,27 @@ func runUpdate() -> Never {
 // MARK: Commands
 
 switch name {
+case "actions":
+    if json {
+        printJSON(["ok": true, "actions": ActionKind.allCases.map { ["id": $0.rawValue, "title": $0.title, "needsTarget": $0.needsTarget, "description": $0.hint] as [String: Any] }])
+    } else { ActionKind.allCases.forEach { print("\($0.rawValue)\($0.needsTarget ? " <target>" : "") — \($0.title)") } }
+
+case "bind":
+    let l = letter(rest[0])
+    guard let kind = ActionKind(rawValue: rest[1]) else { fail("unknown action: \(rest[1]); use `initials actions`") }
+    let action: LetterAction
+    do { action = try LetterAction(kind: kind, target: rest.count == 3 ? rest[2] : nil) }
+    catch { fail(error.localizedDescription) }
+    if [.openFolder, .openFile].contains(kind) {
+        do { _ = try ActionResolver.resolve(action) } catch { fail(error.localizedDescription, code: 1) }
+    }
+    let before = loadConfig()
+    var config = before
+    guard config.bindingsEditable(side) else { fail(sharedLeftMessage) }
+    let replaced = try! config.pin(action.binding, to: l, on: side)
+    finish(before, config, ["side": side.rawValue, "letter": l, "binding": bindingJSON(action.binding),
+                            "replaced": replaced.map { bindingJSON($0) as Any } ?? NSNull()],
+           text: ["\(side.rawValue) \(l.uppercased()) → \(action.displayName)"])
 case "update":
     runUpdate()
 
@@ -510,8 +541,8 @@ case "list":
             if bindings.isEmpty { print("  (no pinned letters)") }
             for letter in bindings.keys.sorted() {
                 let b = bindings[letter]!
-                let found = AppCatalog.url(for: b) != nil ? "" : "  [not found]"
-                print("  \(letter.uppercased())  \(b.name)\(found)")
+                let found = b.action != nil || AppCatalog.url(for: b) != nil ? "" : "  [not found]"
+                print("  \(letter.uppercased())  \(b.displayName)\(found)")
             }
             print("  unpinned letters: \(c.cycleUnbound ? "cycle running apps" : "ignored")  · front app: \(c.hideIfFrontmost ? "hide" : "keep")")
         }
@@ -535,13 +566,24 @@ case "preview":
         printJSON([
             "ok": true, "side": side.rawValue, "frontmost": front?.name as Any? ?? NSNull(),
             "trigger": ["hold": trigger.hold, "doubleTap": trigger.doubleTap, "anyLetter": trigger.anyLetter],
-            "letters": entries.map { e -> [String: Any] in [
+            "letters": entries.map { e -> [String: Any] in
+                var out: [String: Any] = [
                 "letter": e.row.letter, "pinned": e.row.pinned, "title": e.row.title,
-                "app": e.row.binding.map { bindingJSON($0) as Any } ?? NSNull(),
+                "app": e.row.binding.flatMap { $0.action == nil ? bindingJSON($0) as Any : nil } ?? NSNull(),
                 "candidates": e.row.candidates.map(\.name),
                 "action": e.action.verb, "target": e.action.appName as Any? ?? NSNull(),
                 "hold": e.hold, "panel": trigger.doubleTap,
-            ] },
+                ]
+                if let action = e.row.binding?.action {
+                    out["binding"] = bindingJSON(e.row.binding!)
+                    do {
+                        let resolved = try ActionResolver.resolve(action)
+                        out["resolvedTarget"] = resolved.target; out["resolvedAction"] = resolved.verb
+                        out["available"] = true
+                    } catch { out["available"] = false; out["error"] = error.localizedDescription }
+                }
+                return out
+            },
         ])
     } else {
         let ways = [trigger.hold ? "hold + letter" : nil, trigger.doubleTap ? "double-tap panel" : nil].compactMap { $0 }
@@ -551,6 +593,10 @@ case "preview":
             let title = e.row.isEmpty ? "—" : e.row.title
             let reach = e.hold ? "" : (trigger.doubleTap ? "  (panel only)" : "  (not intercepted)")
             print("  \(e.row.letter.uppercased())  \(title.padding(toLength: 24, withPad: " ", startingAt: 0)) → \(e.action.summary)\(reach)")
+            if let action = e.row.binding?.action {
+                do { let resolved = try ActionResolver.resolve(action); print("    \(resolved.verb) \(resolved.target)") }
+                catch { print("    unavailable: \(error.localizedDescription)") }
+            }
         }
     }
 
