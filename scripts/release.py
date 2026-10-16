@@ -70,9 +70,15 @@ def verify_provenance():
             raise ValueError("Current source inputs differ from the actual build receipt.")
         def git(*args):
             return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
-        commit = git("rev-parse", "--verify", "HEAD^{commit}")
-        if source.get("commit") != commit or source.get("dirty") is not False:
-            raise ValueError("Receipt must name the current committed source; rebuild after committing source changes.")
+        commit = git("rev-parse", "--verify", str(source.get("commit", "")) + "^{commit}")
+        if source.get("dirty") is not False:
+            raise ValueError("Receipt must bind committed build inputs.")
+        # Later receipt/docs/acceptance commits do not change compiled bytes.
+        # Verify the complete recorded Git source as well as today's digest.
+        for name, checksum in files.items():
+            historical = subprocess.check_output(["git", "show", f"{commit}:{name}"], cwd=ROOT)
+            if hashlib.sha256(historical).hexdigest() != checksum:
+                raise ValueError("Recorded Git source differs from the actual build input: " + name)
         if git("status", "--porcelain", "--untracked-files=all", "--", *[f":(glob){p}" for p in patterns]):
             raise ValueError("Build source scope has uncommitted changes; unrelated project metadata is excluded.")
         observed = artifact_snapshot(APP)

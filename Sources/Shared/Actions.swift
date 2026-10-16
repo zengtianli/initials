@@ -32,6 +32,15 @@ enum ActionKind: String, Codable, CaseIterable {
         }
     }
     var needsTarget: Bool { [.openFolder, .openFile, .openURL, .runShortcut].contains(self) }
+    /// What Settings offers. The Mac App Store build leaves out the latest-screenshot action: the screenshot
+    /// folder (Desktop, or wherever the system setting points) is outside the App Sandbox.
+    static var offered: [ActionKind] {
+        #if APP_STORE
+        return allCases.filter { $0 != .openLastScreenshot }
+        #else
+        return allCases
+        #endif
+    }
     var symbol: String {
         switch self {
         case .showDownloads, .openFolder: return "folder"
@@ -89,7 +98,15 @@ struct LetterAction: Codable, Equatable {
         let value = [.openFile, .openFolder].contains(kind) ? (target as NSString).lastPathComponent : target
         return kind.title + " · " + value
     }
-    var location: String { target ?? (kind == .openLastScreenshot ? ActionResolver.screenshotDirectory.path : "~/Downloads") }
+    var location: String {
+        if let target { return target }
+        guard kind == .openLastScreenshot else { return "~/Downloads" }
+        #if APP_STORE
+        return ActionResolver.unavailable
+        #else
+        return ActionResolver.screenshotDirectory.path
+        #endif
+    }
     var icon: NSImage? { NSImage(systemSymbolName: kind.symbol, accessibilityDescription: kind.title) }
 }
 
@@ -120,16 +137,30 @@ enum ActionResolver {
               let path = ProcessInfo.processInfo.environment[key] else { return nil }
         return URL(fileURLWithPath: path, isDirectory: true)
     }
-    static var downloads: URL { isolatedDirectory("INITIALS_ACTION_DOWNLOADS_DIR") ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads", isDirectory: true) }
+    static var downloads: URL { isolatedDirectory("INITIALS_ACTION_DOWNLOADS_DIR") ?? Paths.userHome.appendingPathComponent("Downloads", isDirectory: true) }
+    #if APP_STORE
+    static var unavailable: String { T("Mac App Store 版不提供此动作", "Not available in the Mac App Store version") }
+    /// Never read in this build: `resolve` refuses the screenshot action before it would be.
+    static var screenshotDirectory: URL { Paths.userHome.appendingPathComponent("Desktop", isDirectory: true) }
+    #else
     static var screenshotDirectory: URL {
         if let isolated = isolatedDirectory("INITIALS_ACTION_SCREENSHOTS_DIR") { return isolated }
         let path = UserDefaults(suiteName: "com.apple.screencapture")?.string(forKey: "location")
         return path.map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath, isDirectory: true) }
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop", isDirectory: true)
     }
+    #endif
     static func portablePath(_ url: URL) -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let home = Paths.userHome.path
         return url.path.hasPrefix(home + "/") ? "~" + String(url.path.dropFirst(home.count)) : url.path
+    }
+    /// `~/…` → the real home folder (`expandingTildeInPath` gives the container in the App Sandbox).
+    static func expand(_ path: String) -> String {
+        #if APP_STORE
+        if path == "~" { return Paths.userHome.path }
+        if path.hasPrefix("~/") { return Paths.userHome.path + String(path.dropFirst(1)) }
+        #endif
+        return (path as NSString).expandingTildeInPath
     }
     static func latest(_ items: [Item], screenshotsOnly: Bool = false) -> URL? {
         let incomplete = Set(["download", "crdownload", "part", "partial", "tmp", "temp", "icloud"])
@@ -155,9 +186,18 @@ enum ActionResolver {
     static func resolve(_ action: LetterAction, downloads: URL = downloads, screenshots: URL = screenshotDirectory,
                         read: (URL) throws -> [Item] = items) throws -> ResolvedAction {
         try action.validate()
+        #if APP_STORE
+        guard action.kind != .openLastScreenshot else { throw ActionError(unavailable) }
+        #endif
         switch action.kind {
         case .showDownloads: return try existing(downloads, directory: true)
-        case .openFolder, .openFile: return try existing(URL(fileURLWithPath: (action.target! as NSString).expandingTildeInPath), directory: action.kind == .openFolder)
+        case .openFolder, .openFile:
+            let path = expand(action.target!)
+            #if APP_STORE
+            return try existing(try FileGrants.url(for: path), directory: action.kind == .openFolder)
+            #else
+            return try existing(URL(fileURLWithPath: path), directory: action.kind == .openFolder)
+            #endif
         case .openURL: return .open(URL(string: action.target!)!)
         case .runShortcut: return .shortcut(action.target!)
         case .openLastDownload, .revealLastDownload, .openLastScreenshot:

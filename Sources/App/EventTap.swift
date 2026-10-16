@@ -16,7 +16,12 @@ final class EventTap {
 
     var isEnabled: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
 
+    #if APP_STORE
+    /// Either record lets an active tap be created; macOS lists both under Privacy & Security › Accessibility.
+    static var trusted: Bool { AXIsProcessTrusted() || CGPreflightPostEventAccess() }
+    #else
     static var trusted: Bool { AXIsProcessTrusted() }
+    #endif
 
     static func requestTrust() {
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String

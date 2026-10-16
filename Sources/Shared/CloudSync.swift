@@ -1,3 +1,5 @@
+// Not in the Mac App Store build: the iCloud Drive folder is outside the App Sandbox. Settings move by export/import.
+#if !APP_STORE
 import Foundation
 
 /// Uses the user's ordinary iCloud Drive folder. The local config remains the
@@ -148,3 +150,4 @@ enum CloudSyncStore {
         return note
     }
 }
+#endif

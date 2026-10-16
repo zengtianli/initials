@@ -13,11 +13,11 @@ Letters can also run actions: show Downloads, open or reveal the latest download
 
 | Download | Idle memory | Idle CPU | Speed |
 |---|---|---|---|
-| **2.5 MB** (installed 3.4 MB) | **16.8 MB** | **0%** | **415 ms** |
+| **2.6 MB** (installed 3.6 MB) | **19.9 MB** | **0.07%** | **230 ms** |
 
 Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.
 
-<sub>v1.4.0 (13) · Mac16,12 / Apple M4 / macOS 27.2 · measured 2026-10-11. Measured on the listed version and device; the current version and measurement scope are described on this page. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
+<sub>v1.4.1 (14) · Mac16,12 / Apple M4 / macOS 27.2 · Runtime numbers (idle, ready cold launch, letter panel) retain the original 2026-10-15 measurement of local historical acceptance build 1.4.1 (14), with its executable SHA256 unchanged. Its signed bytes differ from current public release 1.4.1 (14); these runtime results are not representative of that public package. Download size is the notarized DMG for public release 1.4.1 (14); installed size was verified on the installed same-source build on 2026-10-16. Runtime metrics were not re-measured. · measured 2026-10-15. Measured on the listed version and device; the current version and measurement scope are described on this page. Memory uses phys_footprint; CPU is CPU time ÷ wall time over a 60-second sampling window; sizes in decimal MB. Raw data: [perf/lightweight.json](perf/lightweight.json).</sub>
 <!-- lightweight:end -->
 
 ## How it works
@@ -80,6 +80,8 @@ initials sync now                 # Reconcile files now; macOS handles cloud tra
 Only app choices and shortcut settings are synced. No typed input is recorded. iCloud uses your own Apple ID; app switching works offline.
 
 "Check for Updates…" is available in the menu bar and Settings. It reads the actual release version from the product website and offers an in-app upgrade. The installer verifies SHA256, app identity and developer signature, keeps a rollback copy and preserves settings. `initials updates --json` checks without installing; a failed request is reported as a failure. When there is a newer release, `initials update install --yes` takes the same path as the window's "Upgrade to the new version…" (add `--dry-run` first to see what it would do).
+
+The update window offers optional automatic checks (every 1–720 hours), downloads and installation while idle. New automatic options default to off; upgrades keep existing choices. Turning checks off pauses automatic behavior without erasing the download/install choices. Installation waits while the letter panel, Settings or an owned action is busy. You can cancel a download, read release notes, skip a version or remind yourself later. `initials update options --json` reads the same options; `initials update options --auto-check on --interval 24 --yes --json` saves them (`--dry-run` previews). The public HTTPS feed does not offer private-channel switching. Isolated tests also require a separate `.test.` bundle ID: a support directory alone does not isolate UserDefaults.
 
 ## Command line (for scripts and agents)
 

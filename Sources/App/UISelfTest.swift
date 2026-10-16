@@ -16,6 +16,12 @@ enum UISelfTest {
 
     static func run(to directory: URL) -> Never {
         requireIsolatedSupport("--ui-self-test")
+        #if !APP_STORE
+        guard InitialsUpdates.isTestBundle(.main) else {
+            fputs("--ui-self-test requires a private .test. bundle identity to isolate update preferences\n", stderr)
+            exit(2)
+        }
+        #endif
         let app = NSApplication.shared
         app.setActivationPolicy(.prohibited)
         do {
@@ -28,10 +34,13 @@ enum UISelfTest {
             let settings = SettingsWindowController(config: config)
             var checks = try settings.checkOffscreenInteractions(to: directory)
             try checkActionDispatch(to: directory, checks: &checks)
+            #if !APP_STORE
             AppLifecycleUI.install(name: "Initials", configuration: nil,
-                                   updateSource: .manifest(InitialsUpdates.feed))
+                                   updateSource: InitialsUpdates.source)
             checks.merge(try AppLifecycleUI.shared.offscreenSnapshot(to: directory.appendingPathComponent("updates.png"))) { _, value in value }
+            checks.merge(try AppLifecycleUI.shared.offscreenSnapshot(to: directory.appendingPathComponent("update-options.png"), showingUpdateOptions: true)) { _, value in value }
             try checkCloudNotifications(to: directory, checks: &checks)
+            #endif
 
             let panel = PickerPanel()
             let entries = (0..<14).map { index in
@@ -105,6 +114,7 @@ enum UISelfTest {
         checks["action_dispatch_empty_error"] = observed == nil && error?.isEmpty == false
     }
 
+    #if !APP_STORE
     private static func checkCloudNotifications(to directory: URL, checks: inout [String: Bool]) throws {
         let cloud = directory.appendingPathComponent("fixture-cloud", isDirectory: true)
         setenv("INITIALS_ICLOUD_DIR", cloud.path, 1)
@@ -145,4 +155,5 @@ enum UISelfTest {
         let after = try Data(contentsOf: cloudURL)
         checks["icloud_disable_preserves_cloud"] = written == after
     }
+    #endif
 }

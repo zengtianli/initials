@@ -21,6 +21,11 @@ Initials — the menu-bar app. Settings and status for scripts and agents: the `
 let knownFlags: Set<String> = ["--help", "-h", "--version", "--background", "--simulate", "--snapshot", "--settings",
                                "--picker", "--right", "--dark", "--login-item-status", "--login-item-set", "--ui-self-test", "--control-self-test",
                                QuietMeasure.flag]
+#if APP_STORE
+let storeFlags: Set<String> = [StoreSelfTest.flag]
+#else
+let storeFlags: Set<String> = []
+#endif
 if arguments.contains("--help") || arguments.contains("-h") {
     print(appUsage)
     exit(0)
@@ -29,10 +34,14 @@ if arguments.contains("--version") {
     print("Initials \(appVersion)")
     exit(0)
 }
-if let unknown = arguments.dropFirst().first(where: { $0.hasPrefix("--") && !knownFlags.contains($0) }) {
+if let unknown = arguments.dropFirst().first(where: { $0.hasPrefix("--") && !knownFlags.contains($0) && !storeFlags.contains($0) }) {
     fputs("Initials: unknown option \(unknown)\n\n\(appUsage)\n", stderr)
     exit(2)
 }
+#if APP_STORE
+// Mac App Store build: what the App Sandbox lets it reach, printed as JSON. Read-only, nothing shown.
+if arguments.contains(StoreSelfTest.flag) { StoreSelfTest.run() }
+#endif
 // SMAppService.mainApp has to run as this bundle, so `initials login` asks this binary.
 func printLoginItem(error: String? = nil) -> Bool {
     let status = SMAppService.mainApp.status

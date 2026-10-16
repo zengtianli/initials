@@ -8,7 +8,7 @@ import re
 import subprocess
 import time
 
-from _common import ROOT, detail, ensure_build, isolated, run
+from _common import ROOT, detail, ensure_build, isolated, production_cli, run
 
 
 class TapInfo(ctypes.Structure):  # CGEventTapInformation
@@ -94,7 +94,8 @@ def main():
                     for p in root.rglob("*") if p.is_file()}
 
         def invoke(*args, expected=0):
-            return run([cli, *args], env=env, expected=expected)
+            executable = production_cli() if args and args[0] == "login" else cli
+            return run([executable, *args], env=env, expected=expected)
 
         original = files()
         result = invoke("set", "q", fixture)
@@ -165,10 +166,10 @@ def main():
     # checker and the installer in the other files and holds no network or clipboard call of its own.
     lifecycle = ROOT / "Sources/Shared/Lifecycle"
     approved = {
-        "AppLifecycle.swift": "3033bc6f87a69a2402ff1cda2c8196a4abd677222582c75d21302a65626c2d89",
-        "AppConfiguration.swift": "ba4d6aa1f52966159e5b74b1ca2878734c61cad80355ace25e19c0f44626947f",
-        "AppLifecycleUI.swift": "6107d9e91f26769341722667f7b1d4d85843ff2c03c159f3456541d756328614",
-        "AppLifecycleCLI.swift": "f33393d954dac50331f4fd650066c6ecea573970d53b50b43e8a86cab708241c",
+        "AppLifecycle.swift": "fb3bb65554e539c61c6f30bf57c1343aa2eceed2968d4d8f3fd09920bf36c25d",
+        "AppConfiguration.swift": "9aeeb1bd2e7be98ea76f1ccc0eefd062caa4c698287295c9cd675195c4401c6f",
+        "AppLifecycleUI.swift": "6160059da9ba310c62b81ac0cc71d014b8a25f57054b03e82f4993cdfe229391",
+        "AppLifecycleCLI.swift": "0f197936945a4825935dd9cb8bac2297480ddf0a29c34183fe6d4cef42f52178",
     }
     for name, digest in approved.items():
         assert hashlib.sha256((lifecycle / name).read_bytes()).hexdigest() == digest, f"Unreviewed shared update source: {name}"
@@ -195,7 +196,7 @@ def main():
     runtime_status = re.search(r"struct RuntimeStatus: Codable[^{]*\{([^}]+)\}", config_source)
     assert runtime_status
     assert set(re.findall(r"\bvar\s+(\w+)\s*:", runtime_status.group(1))) == {
-        "pid", "accessibilityTrusted", "tapEnabled", "paused", "version", "updated"
+        "pid", "accessibilityTrusted", "tapEnabled", "paused", "version", "updated", "updateBusy"
     }
     detail(
         "privacy",
@@ -204,7 +205,7 @@ def main():
         static_checks=[
             f"{len(sources) - len(approved)} product Swift sources checked for listed network/analytics/clipboard APIs; {len(approved)} shared update sources match approved SHA256",
             "EventTap and KeyEngine contain no listed raw keyboard text extraction or logging APIs",
-            "RuntimeStatus source schema contains only PID, permission/interception/pause flags, version and timestamp",
+            "RuntimeStatus source schema contains only PID, permission/interception/pause/busy flags, version and timestamp",
         ],
         boundary="Dynamic coverage is CLI reads/writes, --simulate and the measurement entry with disposable state; "
         "file assertions cover that state tree. Network/clipboard and event logging claims are scoped source checks "

@@ -189,6 +189,16 @@ enum Paths {
             .appendingPathComponent("cyou.tianli.initials", isDirectory: true)
     }
     static var config: URL { supportDirectory.appendingPathComponent("config.json") }
+    /// The account's real home folder. In the App Sandbox `homeDirectoryForCurrentUser` and `~` are the app's
+    /// container, so paths the user sees (`~/Downloads`, `~/Documents/…`) are built from this instead.
+    static var userHome: URL {
+        #if APP_STORE
+        if let entry = getpwuid(getuid()), let dir = entry.pointee.pw_dir {
+            return URL(fileURLWithPath: String(cString: dir), isDirectory: true)
+        }
+        #endif
+        return FileManager.default.homeDirectoryForCurrentUser
+    }
     static var status: URL { supportDirectory.appendingPathComponent("status.json") }
 }
 
@@ -202,14 +212,23 @@ enum ConfigStore {
 
     /// Atomic replace, so the app's file watcher never reads half a file.
     static func save(_ config: Config, to url: URL = Paths.config) throws {
+        #if APP_STORE
+        // An export goes to a file the user picked in a save panel: the App Sandbox grants that file, not its
+        // folder, so the folder is not touched. A folder that really is missing fails the write below.
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        #else
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        #endif
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(config).write(to: url, options: .atomic)
+        #if !APP_STORE
         if url == Paths.config { MacKitKeys.publish(config) }
+        #endif
     }
 }
 
+#if !APP_STORE
 /// When MacKit is installed, keep its shortcut catalog in step with these letters
 /// (`mackit keys`, `mackit doctor`). Isolated runs never touch it.
 enum MacKitKeys {
@@ -235,6 +254,7 @@ enum MacKitKeys {
         }
     }
 }
+#endif
 
 enum ConfigEditError: LocalizedError, Equatable {
     case leftShared
@@ -254,6 +274,8 @@ struct RuntimeStatus: Codable, Equatable {
     var paused: Bool?
     var version: String
     var updated: Date
+    /// Optional for older running builds; new builds report settings/picker/owned action work.
+    var updateBusy: Bool? = nil
 
     static func read(from url: URL = Paths.status) -> RuntimeStatus? {
         guard let data = try? Data(contentsOf: url) else { return nil }

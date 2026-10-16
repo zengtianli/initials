@@ -1,17 +1,17 @@
 {
   "product": "initials",
-  "version": "1.4.0 (13)",
-  "measured_at": "2026-10-11",
+  "version": "1.4.1 (14)",
+  "measured_at": "2026-10-15",
   "device": "Mac16,12 / Apple M4 / macOS 27.2",
   "size": {
-    "download_bytes": 2490640,
-    "download_mb": 2.38,
-    "installed_bytes": 3424256,
-    "installed_mb": 3.27,
-    "download_file": "Initials-1.4.0-arm64.dmg"
+    "download_bytes": 2589432,
+    "download_mb": 2.47,
+    "installed_bytes": 3633152,
+    "installed_mb": 3.46,
+    "download_file": "Initials-1.4.1-arm64.dmg"
   },
   "compare": [],
-  "env_note": "2026-10-11 主会话逐个顺序测量，负载均值 2.71 3.89 4.09；total = 5120.00M  used = 3761.94M  free = 1358.06M（开始时）；启动时间受负载影响，内存与 CPU 为进程自身数值",
+  "env_note": "2026-10-15 主会话逐个顺序测量，负载均值 4.00 4.61 8.89；total = 7168.00M  used = 5827.88M  free = 1340.12M（开始时）；启动时间受负载影响，内存与 CPU 为进程自身数值",
   "why": "纯 AppKit，零第三方依赖；按键由系统事件回调送达，回调里只做几次比较，切换动作放到回调外执行；配置改动由 kqueue 通知、不轮询，仅每 30 秒确认一次按键监听仍开着。",
   "why_en": "Pure AppKit with no third-party dependencies. Keys arrive through a system event-tap callback that only makes a few comparisons, and the switch itself runs outside the callback; config changes arrive via kqueue instead of polling, and a 30-second check only confirms the key tap is still on.",
   "history": [
@@ -1126,12 +1126,136 @@
           }
         }
       }
+    },
+    {
+      "section": "version",
+      "replaced_on": "2026-10-15",
+      "reason": "装机：安装了轻量化后的新构建",
+      "value": "1.4.0 (13)"
+    },
+    {
+      "section": "idle",
+      "version": "1.4.0 (13)",
+      "replaced_on": "2026-10-15",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "process": "/Applications/Initials.app",
+        "footprint_mb": 16.0,
+        "main_footprint_mb": 16.0,
+        "cpu_pct": 0.0,
+        "main_cpu_pct": 0.0,
+        "processes": [
+          {
+            "name": "main",
+            "cpu_pct": 0.0,
+            "footprint_peak_mb": 16.0
+          }
+        ],
+        "window_s": 60,
+        "settle_s": null,
+        "measured_at": "2026-10-11",
+        "method": "对原登记常驻实例直接采样； measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟；采样时本人在用电脑（被测 App 未在前台被使用，否则丢弃重采）",
+        "load": "负载均值 3.02 3.68 3.99；total = 5120.00M  used = 3713.94M  free = 1406.06M",
+        "owner_idle_s_at_start": 244
+      }
+    },
+    {
+      "section": "speed_gui",
+      "version": "1.4.0 (13)",
+      "replaced_on": "2026-10-15",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": [
+        {
+          "key": "cold_launch_to_ready",
+          "label": "冷启动到首屏就绪",
+          "median_ms": 415.0,
+          "runs": 5,
+          "ready_signal": "os_log",
+          "headline": true,
+          "raw_ms": [
+            1139.0,
+            331.0,
+            383.0,
+            466.0,
+            415.0
+          ],
+          "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+        },
+        {
+          "key": "picker_offscreen_end_to_end",
+          "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
+          "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
+          "median_ms": 91.7,
+          "runs": 7,
+          "headline": false,
+          "method": "已安装构建 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
+          "raw": "perf/raw/picker-operation-1.4.0-13.json",
+          "load": "负载均值 3.10 3.69 3.99；total = 5120.00M  used = 3713.94M  free = 1406.06M"
+        }
+      ]
+    },
+    {
+      "section": "runtime_measurement",
+      "version": "1.4.0 (13)",
+      "replaced_on": "2026-10-15",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "environment": "native",
+        "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/7ebd540dda1f44f48de0b7e68b8f0d87.raw.json",
+        "evidence_sha256": "afbcebc92927f7dc5b19f4d168f2b91baca68c6dc58dab9baea76ac865f9a045",
+        "input_sha256": "66a77252a6bac7f4885754870e274c08c7fda338d2869ecf2919c6ba29ab6485",
+        "ready_signal": "os_log"
+      }
+    },
+    {
+      "section": "speed",
+      "version": "1.4.0 (13)",
+      "replaced_on": "2026-10-15",
+      "reason": "版本变化；仅本次实测可作为当前证据",
+      "value": {
+        "cold_launch_ms": 415.0,
+        "runs": 5,
+        "ready_signal": "os_log",
+        "raw_ms": [
+          1139.0,
+          331.0,
+          383.0,
+          466.0,
+          415.0
+        ],
+        "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
+      }
+    },
+    {
+      "section": "size",
+      "version": "1.4.0 (13)",
+      "replaced_on": "2026-10-15",
+      "reason": "版本变化；旧安装包大小不沿用",
+      "value": {
+        "download_bytes": 2490640,
+        "download_mb": 2.38,
+        "installed_bytes": 3424256,
+        "installed_mb": 3.27,
+        "download_file": "Initials-1.4.0-arm64.dmg"
+      }
+    },
+    {
+      "section": "size",
+      "replaced_on": "2026-10-16",
+      "reason": "按本次公证发行的真实 DMG 和已装 App 静态尺寸核验；运行采样原件与日期不变",
+      "value": {
+        "download_bytes": 2490640,
+        "download_mb": 2.38,
+        "installed_bytes": 3633152,
+        "installed_mb": 3.46,
+        "download_file": "Initials-1.4.0-arm64.dmg"
+      }
     }
   ],
   "measured_artifact": {
-    "version": "1.4.0",
-    "build": "13",
-    "executable_sha256": "b7e2ec3108d522b00b1335f4b12681b903ad81af5e411d58e383fd5d20cf2024"
+    "version": "1.4.1",
+    "build": "14",
+    "executable_sha256": "713cbf49e8767d4a57f7bef699ee8d114a3b149b11bf4b7c9c7f011bd20c3fe5"
   },
   "measurement_history": [
     {
@@ -1141,17 +1265,17 @@
       "reason": "Replaced old-process measurement with actual installed 1.1.1 runtime, accessibility and event tap confirmed"
     }
   ],
-  "input_sha256": "66a77252a6bac7f4885754870e274c08c7fda338d2869ecf2919c6ba29ab6485",
+  "input_sha256": "800258be234e443f28d0826c8451b0c11b2fd699f3165a6a10d1c7b27230947c",
   "speed": {
-    "cold_launch_ms": 415.0,
+    "cold_launch_ms": 230.0,
     "runs": 5,
     "ready_signal": "os_log",
     "raw_ms": [
-      1139.0,
-      331.0,
-      383.0,
-      466.0,
-      415.0
+      325.0,
+      182.0,
+      230.0,
+      164.0,
+      248.0
     ],
     "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
   },
@@ -1159,16 +1283,16 @@
     {
       "key": "cold_launch_to_ready",
       "label": "冷启动到首屏就绪",
-      "median_ms": 415.0,
+      "median_ms": 230.0,
       "runs": 5,
       "ready_signal": "os_log",
       "headline": true,
       "raw_ms": [
-        1139.0,
-        331.0,
-        383.0,
-        466.0,
-        415.0
+        325.0,
+        182.0,
+        230.0,
+        164.0,
+        248.0
       ],
       "method": "sim_lane.run_mac_quiet：LSUIElement 隔离副本；open -g -j -n -> App os_log lane-ready（首屏数据与布局完成）；5 次中位数"
     },
@@ -1176,39 +1300,41 @@
       "key": "picker_offscreen_end_to_end",
       "label": "启动到字母面板离屏渲染完成（含 PNG 导出）",
       "label_en": "Start to letter-panel offscreen render completed (including PNG export)",
-      "median_ms": 91.7,
+      "median_ms": 441.0,
       "runs": 7,
       "headline": false,
       "method": "已安装构建 --snapshot --picker --right，隔离 INITIALS_SUPPORT_DIR（复制本人配置）；生产 PickerPanel 条目查询、布局和 Retina PNG 导出，1 次预热后 7 次中位；不启用按键拦截、不抢焦点。包括进程启动与导出，不代表前台切换应用耗时。",
-      "raw": "perf/raw/picker-operation-1.4.0-13.json",
-      "load": "负载均值 3.10 3.69 3.99；total = 5120.00M  used = 3713.94M  free = 1406.06M"
+      "raw": "perf/raw/picker-operation-1.4.1-14.json",
+      "load": "负载均值 3.17 4.18 8.29；total = 7168.00M  used = 5811.88M  free = 1356.12M"
     }
   ],
   "idle": {
     "process": "/Applications/Initials.app",
-    "footprint_mb": 16.0,
-    "main_footprint_mb": 16.0,
-    "cpu_pct": 0.0,
-    "main_cpu_pct": 0.0,
+    "footprint_mb": 19.0,
+    "main_footprint_mb": 19.0,
+    "cpu_pct": 0.07,
+    "main_cpu_pct": 0.07,
     "processes": [
       {
         "name": "main",
-        "cpu_pct": 0.0,
-        "footprint_peak_mb": 16.0
+        "cpu_pct": 0.066,
+        "footprint_peak_mb": 19.0
       }
     ],
     "window_s": 60,
     "settle_s": null,
-    "measured_at": "2026-10-11",
+    "measured_at": "2026-10-15",
     "method": "对原登记常驻实例直接采样； measure.py idle <PID> --seconds 60 --with-helpers：内存为主进程 + WebKit/XPC 辅助进程 + 子进程同一时刻 phys_footprint 之和的峰值（活动监视器「内存」列同口径），CPU 为这些进程窗口内 CPU 时间增量之和 ÷ 墙钟；采样时本人在用电脑（被测 App 未在前台被使用，否则丢弃重采）",
-    "load": "负载均值 3.02 3.68 3.99；total = 5120.00M  used = 3713.94M  free = 1406.06M",
-    "owner_idle_s_at_start": 244
+    "load": "负载均值 3.01 4.16 8.31；total = 7168.00M  used = 5811.88M  free = 1356.12M",
+    "owner_idle_s_at_start": 0
   },
   "runtime_measurement": {
     "environment": "native",
-    "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/7ebd540dda1f44f48de0b7e68b8f0d87.raw.json",
-    "evidence_sha256": "afbcebc92927f7dc5b19f4d168f2b91baca68c6dc58dab9baea76ac865f9a045",
-    "input_sha256": "66a77252a6bac7f4885754870e274c08c7fda338d2869ecf2919c6ba29ab6485",
+    "evidence": "~/Library/Caches/app-lightweight/measurement-candidates/9a2a71276ea84788beec9843cc906fb5.raw.json",
+    "evidence_sha256": "906093a97a64e2a760cf713c3a122835cacca3a0e4d451f793231bb5cd67065f",
+    "input_sha256": "800258be234e443f28d0826c8451b0c11b2fd699f3165a6a10d1c7b27230947c",
     "ready_signal": "os_log"
-  }
+  },
+  "data": "运行数据（空闲、就绪冷启动、字母面板）保留 2026-10-15 的本地历史验收构建 1.4.1 (14) 实测，原可执行文件 SHA256 不变；其签名字节不同于当前公开发行 1.4.1 (14)，不代表当前公开包的运行表现。下载大小来自当前公开发行 1.4.1 (14) 的公证 DMG，安装占用按 2026-10-16 的已装同源构建核验；本轮没有重测运行指标。",
+  "data_en": "Runtime numbers (idle, ready cold launch, letter panel) retain the original 2026-10-15 measurement of local historical acceptance build 1.4.1 (14), with its executable SHA256 unchanged. Its signed bytes differ from current public release 1.4.1 (14); these runtime results are not representative of that public package. Download size is the notarized DMG for public release 1.4.1 (14); installed size was verified on the installed same-source build on 2026-10-16. Runtime metrics were not re-measured."
 }

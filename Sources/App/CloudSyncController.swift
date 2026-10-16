@@ -1,3 +1,5 @@
+// Not in the Mac App Store build (see CloudSync.swift).
+#if !APP_STORE
 import AppKit
 
 /// System document notifications instead of another polling timer. Neither
@@ -56,3 +58,4 @@ final class CloudSyncController: NSObject, NSFilePresenter {
         for token in tokens { NotificationCenter.default.removeObserver(token); NSWorkspace.shared.notificationCenter.removeObserver(token) }
     }
 }
+#endif

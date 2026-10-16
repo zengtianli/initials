@@ -1,3 +1,5 @@
+// Not in the Mac App Store build: ~/.hammerspoon and ~/.config are outside the App Sandbox.
+#if !APP_STORE
 import Foundation
 
 /// Bridge for people coming from a Hammerspoon "rcmd" setup: read its right-⌘
@@ -111,3 +113,4 @@ enum Hammerspoon {
             : T("已写入设置；Hammerspoon 未响应重载，请手动 Reload Config。", "Saved; Hammerspoon did not reload, choose Reload Config.")
     }
 }
+#endif

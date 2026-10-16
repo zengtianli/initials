@@ -327,12 +327,26 @@ do {
     check((try! ConfigStore.load(from: target)) == imported.config, "import restores readable full config")
     check((try! ConfigTransfer.apply(imported, to: target)) == nil, "repeated import is idempotent and leaves backup intact")
     for invalid in ["{}", #"{"version":2,"right":{},"left":{}}"#,
+                    #"{"version":null,"right":{},"left":{}}"#,
+                    #"{"version":1,"right":{"hold":null},"left":{}}"#,
+                    #"{"version":1,"right":{"enabled":1},"left":{}}"#,
+                    #"{"version":1,"right":{"bindings":null},"left":{}}"#,
+                    #"{"version":1,"right":{},"left":{},"pickerTimeoutSeconds":null}"#,
+                    #"{"version":1,"right":{},"left":{},"doubleTapSeconds":"0.3"}"#,
+                    #"{"version":1,"right":{},"left":{},"unknown":true}"#,
+                    #"{"version":1,"right":{"bindings":{"a":{"name":"App","path":"relative/App.app"}}},"left":{}}"#,
+                    #"{"version":1,"right":{"bindings":{"a":{"name":"App","bundleID":42}}},"left":{}}"#,
+                    #"{"version":1,"right":{"bindings":{"a":{"name":"Action","bundleID":"test.app","action":{"kind":"show-downloads"}}}},"left":{}}"#,
                     #"{"version":1,"right":{"bindings":{"1":{"name":"bad"}}},"left":{}}"#,
                     #"{"version":1,"right":{},"left":{},"doubleTapSeconds":0}"#] {
         try! Data(invalid.utf8).write(to: source)
         do { _ = try ConfigTransfer.read(from: source); check(false, "invalid import must fail: \(invalid)") }
         catch { check((try! ConfigStore.load(from: target)) == imported.config, "invalid import cannot mutate current configuration") }
     }
+    check(InitialsUpdates.canInstall(pickerOpen: false, settingsOpen: false, actionPending: false), "idle updater allowed without changing trigger or pause state")
+    check(!InitialsUpdates.canInstall(pickerOpen: true, settingsOpen: false, actionPending: false)
+          && !InitialsUpdates.canInstall(pickerOpen: false, settingsOpen: true, actionPending: false)
+          && !InitialsUpdates.canInstall(pickerOpen: false, settingsOpen: false, actionPending: true), "picker, settings and owned work each defer replacement")
     let base = Config()
     var local = base, cloud = base
     local.right.bindings["m"] = pinMusic

@@ -8,7 +8,7 @@ import re
 import subprocess
 import time
 
-from _common import detail, ensure_build, isolated, run
+from _common import detail, ensure_build, isolated, production_cli, run
 from config_sync import exercise as exercise_config_sync
 from update_command import exercise as exercise_update_command
 from actions import exercise as exercise_actions
@@ -21,7 +21,11 @@ def main():
         config_path = root / "support/config.json"
 
         def command(*args, expected=0):
-            return run([cli, *args], env=env, expected=expected)
+            # Login status is tied to the real registered bundle identity. Its
+            # dry-run/refusal tests retain INITIALS_SUPPORT_DIR and never alter
+            # login registration; update-option writes use the private clone.
+            executable = production_cli() if args and args[0] == "login" else cli
+            return run([executable, *args], env=env, expected=expected)
 
         def state():
             # Every read starts a new CLI process and therefore tests persistence.

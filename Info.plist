@@ -6,8 +6,8 @@
   <key>CFBundleDisplayName</key><string>Initials</string>
   <key>CFBundleExecutable</key><string>Initials</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.4.0</string>
-  <key>CFBundleVersion</key><string>13</string>
+  <key>CFBundleShortVersionString</key><string>1.4.1</string>
+  <key>CFBundleVersion</key><string>14</string>
   <key>NSDownloadsFolderUsageDescription</key><string>Initials opens your Downloads folder or the latest completed download when you trigger a configured action.</string>
   <key>NSDesktopFolderUsageDescription</key><string>Initials finds the latest screenshot in your screenshot folder when you trigger its configured action.</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>

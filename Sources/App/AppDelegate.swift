@@ -12,9 +12,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var pickerTimer: Timer?
     private var trustTimer: Timer?
     private var watcher: DispatchSourceFileSystemObject?
+    private var updateBusyObservers: [NSObjectProtocol] = []
     private let pauseControl = PauseControl()
+    #if !APP_STORE
     private let cloudSync = CloudSyncController()
     private var syncNote = ""
+    #endif
     private var paused: Bool { pauseControl.paused }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -24,11 +27,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         NSApp.setActivationPolicy(.accessory)
+        // The Mac App Store build has no update check (the App Store updates it) and no iCloud Drive sync.
+        #if !APP_STORE
         AppLifecycleUI.install(name: "Initials", configuration: nil,
                                updateSource: .manifest(InitialsUpdates.feed))
+        AppLifecycleUI.shared.canInstallUpdate = { [weak self] in self?.canInstallUpdate ?? false }
+        #endif
+        Launcher.onWorkChange = { [weak self] in self?.writeStatus(onlyIfChanged: true) }
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.willCloseNotification] {
+            updateBusyObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                DispatchQueue.main.async { self?.writeStatus(onlyIfChanged: true) }
+            })
+        }
         loadConfig()
         buildStatusItem()
         watchConfig()
+        #if !APP_STORE
         cloudSync.onUpdate = { [weak self] note in
             guard let self else { return }
             self.syncNote = note
@@ -36,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.settings?.refreshSyncStatus(note)
         }
         cloudSync.start()
+        #endif
         tap.onOutput = { [weak self] in self?.handle($0) }
         tap.onWatchdog = { [weak self] in
             guard let self, self.writeStatus(onlyIfChanged: true) else { return }
@@ -99,7 +114,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             pending = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 pending = false
+                #if !APP_STORE
                 self?.cloudSync.request()
+                #endif
                 guard let self, let fresh = try? ConfigStore.load(), fresh != self.config else { return }
                 self.config = fresh
                 self.configError = nil
@@ -150,6 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pickerTimer = Timer.scheduledTimer(withTimeInterval: config.pickerTimeoutSeconds, repeats: false) { [weak self] _ in
             self?.closePicker()
         }
+        writeStatus(onlyIfChanged: true)
     }
 
     private func closePicker() {
@@ -157,6 +175,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pickerTimer = nil
         tap.engine.pickerOpen = false
         picker.orderOut(nil)
+        writeStatus(onlyIfChanged: true)
+    }
+
+    private var canInstallUpdate: Bool {
+        InitialsUpdates.canInstall(pickerOpen: picker.isVisible,
+                                  settingsOpen: settings?.window?.isVisible == true,
+                                  actionPending: Launcher.pendingWork > 0)
     }
 
     /// Launch, Accessibility granted and pause/resume always write (a pause request is confirmed even
@@ -166,7 +191,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @discardableResult
     private func writeStatus(onlyIfChanged: Bool = false) -> Bool {
         RuntimeStatus(pid: ProcessInfo.processInfo.processIdentifier, accessibilityTrusted: EventTap.trusted,
-                      tapEnabled: tap.isEnabled, paused: paused, version: appVersion, updated: Date())
+                      tapEnabled: tap.isEnabled, paused: paused, version: appVersion, updated: Date(), updateBusy: !canInstallUpdate)
             .publish(onlyIfChanged: onlyIfChanged)
     }
 
@@ -203,9 +228,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let prefs = NSMenuItem(title: T("设置…", "Settings…"), action: #selector(showSettings(_:)), keyEquivalent: ",")
         prefs.target = self
         menu.addItem(prefs)
+        #if !APP_STORE
         let update = AppLifecycleUI.menuItems()[1]
         update.title = T("检查更新…", "Check for Updates…")
         menu.addItem(update)
+        #endif
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: T("退出 Initials", "Quit Initials"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
@@ -220,13 +247,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             controller.onChange = { [weak self] fresh in
                 self?.config = fresh
                 self?.applyConfig()
+                #if !APP_STORE
                 self?.cloudSync.request()
+                #endif
             }
             controller.onRequestTrust = { EventTap.requestTrust() }
             controller.isTapRunning = { [weak self] in self?.tap.isEnabled ?? false }
+            #if !APP_STORE
             controller.onSyncChange = { [weak self] in self?.cloudSync.request() }
             controller.onCheckForUpdates = { AppLifecycleUI.shared.checkForUpdates() }
             controller.refreshSyncStatus(syncNote)
+            #endif
             settings = controller
         }
         NSApp.mainMenu = MainMenu.build(target: self, settings: settings!)
@@ -240,9 +271,11 @@ enum MainMenu {
         let main = NSMenu()
         let app = NSMenu(title: "Initials")
         app.addItem(withTitle: T("关于 Initials", "About Initials"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        #if !APP_STORE
         let update = AppLifecycleUI.menuItems()[1]
         update.title = T("检查更新…", "Check for Updates…")
         app.addItem(update)
+        #endif
         app.addItem(.separator())
         app.addItem(withTitle: T("隐藏 Initials", "Hide Initials"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         app.addItem(withTitle: T("退出 Initials", "Quit Initials"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")

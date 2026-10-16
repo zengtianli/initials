@@ -305,6 +305,147 @@
       "reason": "旧视频继续说明应用字母与双击面板；新增动作请看本页的动作说明和 1.4.0 原生截图。视频没有重新录制，不展示新版动作编辑器。",
       "reason_en": "The older clips still explain app letters and the double-tap panel. See this page’s action instructions and native 1.4.0 screenshots for new actions. The clips were not re-recorded and do not show the new action editor.",
       "verification": "Eight Chinese/English settings and picker snapshots and two action-editor snapshots rendered from the real 1.4.0 app, isolated and offscreen. Unit tests, real CLI and native offscreen action acceptance passed; original videos retained."
+    },
+    "1.4.1 (14)": {
+      "reviewed_at": "2026-10-16T04:43:58+00:00",
+      "reason": "保留标明 1.1.0 的历史离屏字母表导览，未重录视频。1.4.1 与公开 1.4.0 的八张中英设置及面板在同一环境逐像素一致；静态截图刷新日历图标和登录项状态。新增自动更新选项不在旧片段中，由当前原生离屏验收覆盖；旧片不代表新版全部界面或真实按键实录。",
+      "reason_en": "Retain the explicitly labelled 1.1.0 historical offscreen letter-table guide, without re-recording. Eight bilingual Settings/picker views from 1.4.1 and public 1.4.0 are pixel-identical in the same environment. Static screenshots refresh calendar icons and login status. New optional update controls are covered by current native offscreen acceptance, not the historical clips; the clips are not a full current-UI or live-key recording.",
+      "verification": "scripts/review-media.py --baseline-app build/Initials.app; frozen build/media-review/review.json"
     }
-  }
+  },
+  "ui_reviews": [
+    {
+      "checked_at": "2026-10-16T04:43:58+00:00",
+      "tool": "python3 scripts/review-media.py",
+      "version": "1.4.1",
+      "build": "14",
+      "executable_sha256": "713cbf49e8767d4a57f7bef699ee8d114a3b149b11bf4b7c9c7f011bd20c3fe5",
+      "ui_source_sha256": "05451915d44bbdabf88a571206c03e301d5ca3d927ec637c04cf6dc455156935",
+      "unchanged": true,
+      "screenshots": {
+        "settings-right-zh.png": {
+          "unchanged_pixels": false,
+          "previous_sha256": "996bb90e3a7e5dc98a226ac94ecd3cf7e383b9970c9902ebab4e5b5f76b61256",
+          "current_sha256": "048b7aae95d25f4c1a804a1bbd091c692f539deae7fbaa957ce64b08518ff42c",
+          "previous_size": [
+            1240,
+            1274
+          ],
+          "current_size": [
+            1240,
+            1274
+          ],
+          "baseline_sha256": "048b7aae95d25f4c1a804a1bbd091c692f539deae7fbaa957ce64b08518ff42c",
+          "release_ui_unchanged": true
+        },
+        "settings-left-zh.png": {
+          "unchanged_pixels": false,
+          "previous_sha256": "826524655bb4648a7158e6dee87b80f1e1a315efb080f40a596ade4768d9dedf",
+          "current_sha256": "ece668295472312cc1e1616e0b5ed606de388407c9e5c1ab209f8591ff241049",
+          "previous_size": [
+            1240,
+            1326
+          ],
+          "current_size": [
+            1240,
+            1326
+          ],
+          "baseline_sha256": "ece668295472312cc1e1616e0b5ed606de388407c9e5c1ab209f8591ff241049",
+          "release_ui_unchanged": true
+        },
+        "picker-zh.png": {
+          "unchanged_pixels": false,
+          "previous_sha256": "1b58d948380a5e22f9ad3237a9ab5c278e0e4065f3d039b420ec9bf067a35e76",
+          "current_sha256": "14e956e39a9df454b2f486c3437df4aadebaf312e2e0429e48d286d7ca70e9a5",
+          "previous_size": [
+            820,
+            446
+          ],
+          "current_size": [
+            820,
+            446
+          ],
+          "baseline_sha256": "14e956e39a9df454b2f486c3437df4aadebaf312e2e0429e48d286d7ca70e9a5",
+          "release_ui_unchanged": true
+        },
+        "picker-dark-zh.png": {
+          "unchanged_pixels": false,
+          "previous_sha256": "3a6f975dd8f64206a648a51c449b4b989c5fcceb70fe00521a721c8138880059",
+          "current_sha256": "75085aeb80cabe4ec3d2bb3824efbf08b98cf9d5148f3e8a243a210fedb7ba91",
+          "previous_size": [
+            820,
+            446
+          ],
+          "current_size": [
+            820,
+            446
+          ],
+          "baseline_sha256": "75085aeb80cabe4ec3d2bb3824efbf08b98cf9d5148f3e8a243a210fedb7ba91",
+          "release_ui_unchanged": true
+        },
+        "settings-right-en.png": {
+          "unchanged_pixels": false,
+          "previous_sha256": "129cb8f534b317861148524d3ed95718cfa2f96ae451daaeef2750ce0c3242d2",
+          "current_sha256": "eeb2e92895f1dbd69f5a2faa655c4eeb3b3f02cf2a1016c3be0244a671bbb351",
+          "previous_size": [
+            1240,
+            1304
+          ],
+          "current_size": [
+            1240,
+            1304
+          ],
+          "baseline_sha256": "eeb2e92895f1dbd69f5a2faa655c4eeb3b3f02cf2a1016c3be0244a671bbb351",
+          "release_ui_unchanged": true
+        },
+        "settings-left-en.png": {
+          "unchanged_pixels": false,
+          "previous_sha256": "6f364085d717768cdd9c89f0106202dd462037ae9064d178b363bb98ca853aea",
+          "current_sha256": "f9f81adcf0479b36830f664bf51554523cc59ce9cdc4c322f50baeeb460035bf",
+          "previous_size": [
+            1240,
+            1386
+          ],
+          "current_size": [
+            1240,
+            1386
+          ],
+          "baseline_sha256": "f9f81adcf0479b36830f664bf51554523cc59ce9cdc4c322f50baeeb460035bf",
+          "release_ui_unchanged": true
+        },
+        "picker-en.png": {
+          "unchanged_pixels": false,
+          "previous_sha256": "39548a6a21e215bd1feb8d71f1d63f6883d9aaf8a7ee2950214a04168c434b3e",
+          "current_sha256": "4f52cec4fcae25e5cb02c260e337c68c39a61a8ca31da3acaa44bff32f51e076",
+          "previous_size": [
+            820,
+            446
+          ],
+          "current_size": [
+            820,
+            446
+          ],
+          "baseline_sha256": "4f52cec4fcae25e5cb02c260e337c68c39a61a8ca31da3acaa44bff32f51e076",
+          "release_ui_unchanged": true
+        },
+        "picker-dark-en.png": {
+          "unchanged_pixels": true,
+          "previous_sha256": "b584ed6d986d1f3ccfff870e1e55aa1d7c1239620b6e2e545d02fc23d3189fb1",
+          "current_sha256": "b584ed6d986d1f3ccfff870e1e55aa1d7c1239620b6e2e545d02fc23d3189fb1",
+          "previous_size": [
+            820,
+            446
+          ],
+          "current_size": [
+            820,
+            446
+          ],
+          "baseline_sha256": "b584ed6d986d1f3ccfff870e1e55aa1d7c1239620b6e2e545d02fc23d3189fb1",
+          "release_ui_unchanged": true
+        }
+      },
+      "baseline_executable_sha256": "b7e2ec3108d522b00b1335f4b12681b903ad81af5e411d58e383fd5d20cf2024",
+      "method": "Real --snapshot, isolated fixture; no event tap, synthetic input or focus changes"
+    }
+  ]
 }

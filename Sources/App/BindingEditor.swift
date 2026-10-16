@@ -27,7 +27,7 @@ final class BindingEditor: NSWindowController {
         let selected = letter ?? (97...122).map { String(UnicodeScalar($0)!) }.first { bindings[$0] == nil } ?? "a"
         letterPicker.selectItem(at: Int(selected.unicodeScalars.first!.value - 97))
         typePicker.addItem(withTitle: T("应用", "Application"))
-        for action in ActionKind.allCases { typePicker.addItem(withTitle: action.title); typePicker.lastItem?.representedObject = action }
+        for action in ActionKind.offered { typePicker.addItem(withTitle: action.title); typePicker.lastItem?.representedObject = action }
         typePicker.target = self; typePicker.action = #selector(typeChanged)
         target.placeholderString = T("目标", "Target")
         browse.target = self; browse.action = #selector(chooseTarget)
@@ -70,7 +70,7 @@ final class BindingEditor: NSWindowController {
     @objc private func cancelBinding() { dismiss() }
     @objc private func typeChanged() { app = nil; target.stringValue = ""; refresh() }
     func setType(_ kind: ActionKind?, target value: String) {
-        typePicker.selectItem(at: kind.flatMap { ActionKind.allCases.firstIndex(of: $0).map { $0 + 1 } } ?? 0)
+        typePicker.selectItem(at: kind.flatMap { ActionKind.offered.firstIndex(of: $0).map { $0 + 1 } } ?? 0)
         target.stringValue = value
         refresh()
     }
@@ -91,6 +91,12 @@ final class BindingEditor: NSWindowController {
         if kind == nil { panel.allowedContentTypes = [.application]; panel.directoryURL = URL(fileURLWithPath: "/Applications") }
         panel.beginSheetModal(for: window) { [weak self] response in
             guard let self, response == .OK, let url = panel.url else { return }
+            #if APP_STORE
+            // The panel's access ends with this run; the saved grant lets the letter open it after a relaunch.
+            if self.kind != nil {
+                do { try FileGrants.remember(url) } catch { self.errorLabel.stringValue = error.localizedDescription }
+            }
+            #endif
             self.app = self.kind == nil ? AppCatalog.binding(for: url) : nil
             self.target.stringValue = self.kind == nil ? url.path : ActionResolver.portablePath(url)
         }
@@ -118,7 +124,7 @@ final class BindingEditor: NSWindowController {
         var checks: [String: Bool] = [:]
         var saved: Binding?
         onSave = { binding, _ in saved = binding }
-        for action in ActionKind.allCases {
+        for action in ActionKind.offered {
             let value = action == .openFolder ? directory.path : action == .openFile ? directory.appendingPathComponent("editor-fixture.txt").path
                 : action == .openURL ? "https://example.com" : action == .runShortcut ? "Fixture Shortcut" : ""
             setType(action, target: value)

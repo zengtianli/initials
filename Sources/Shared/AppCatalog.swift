@@ -3,11 +3,17 @@ import AppKit
 /// Finds installed apps and turns a name, path or bundle identifier into a binding.
 enum AppCatalog {
     static var searchDirectories: [URL] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        return ["/Applications", "/Applications/Utilities", "/System/Applications",
-                "/System/Applications/Utilities", "/System/Library/CoreServices"]
+        let system = ["/Applications", "/Applications/Utilities", "/System/Applications",
+                      "/System/Applications/Utilities", "/System/Library/CoreServices"]
             .map { URL(fileURLWithPath: $0, isDirectory: true) }
-            + [home.appendingPathComponent("Applications", isDirectory: true)]
+        #if APP_STORE
+        // The App Sandbox cannot list ~/Applications. An app there is still pinned with "Choose…" and
+        // found again by its bundle identifier.
+        return system
+        #else
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return system + [home.appendingPathComponent("Applications", isDirectory: true)]
+        #endif
     }
 
     static func binding(for url: URL) -> Binding? {
@@ -42,7 +48,7 @@ enum AppCatalog {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return nil }
         if q.hasPrefix("/") || q.hasPrefix("~") {
-            return binding(for: URL(fileURLWithPath: (q as NSString).expandingTildeInPath))
+            return binding(for: URL(fileURLWithPath: ActionResolver.expand(q)))
         }
         if q.contains("."), !q.contains(" "), !q.lowercased().hasSuffix(".app"),
            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: q) {

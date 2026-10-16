@@ -33,6 +33,7 @@ enum ConfigTransfer {
             throw Invalid(reason: T("这不是 Initials 配置文件（需包含 version、right 和 left）。",
                                     "Not an Initials configuration (version, right and left are required)."))
         }
+        try validateFields(root)
         var config = try JSONDecoder().decode(Config.self, from: data)
         guard config.version == 1 else {
             throw Invalid(reason: T("不支持此配置版本，请更新 Initials 后重试。",
@@ -51,6 +52,12 @@ enum ConfigTransfer {
                     throw Invalid(reason: T("配置中有无效字母或空的 App 名称。",
                                             "Configuration contains an invalid letter or an empty app name."))
                 }
+                if let path = binding.path, !(path.hasPrefix("/") || path.hasPrefix("~/")) {
+                    throw Invalid(reason: "\(side.rawValue).bindings.\(letter).path: \(T("需为绝对路径或 ~/ 路径。", "Expected an absolute or ~/ path."))")
+                }
+                if binding.action != nil && (binding.path != nil || binding.bundleID != nil) {
+                    throw Invalid(reason: T("同一字母不能同时指定动作和 App。", "A binding cannot specify both an action and an app."))
+                }
             }
         }
         var missing: [MissingApp] = []
@@ -68,6 +75,33 @@ enum ConfigTransfer {
             }
         }
         return Imported(config: config, missing: missing)
+    }
+
+    /// Missing legacy fields use defaults; explicit null and unknown fields never silently erase settings.
+    private static func validateFields(_ root: [String: Any]) throws {
+        func shape(_ object: [String: Any], allowed: Set<String>, nullable: Set<String> = [], at: String) throws {
+            for (key, value) in object {
+                guard allowed.contains(key), !(value is NSNull) || nullable.contains(key) else {
+                    throw Invalid(reason: "\(at).\(key): \(T("未知字段或不允许为空。", "Unknown field or unexpected null."))")
+                }
+            }
+        }
+        try shape(root, allowed: ["version", "right", "left", "doubleTapSeconds", "pickerTimeoutSeconds"], at: "config")
+        for side in Side.allCases {
+            let s = root[side.rawValue] as! [String: Any]
+            try shape(s, allowed: ["enabled", "hold", "doubleTap", "bindings", "hideIfFrontmost", "cycleUnbound", "useRightBindings"], at: side.rawValue)
+            if let bindings = s["bindings"] as? [String: Any] {
+                for (letter, value) in bindings {
+                    guard let binding = value as? [String: Any] else {
+                        throw Invalid(reason: "\(side.rawValue).bindings.\(letter): \(T("需为对象。", "Expected an object."))")
+                    }
+                    try shape(binding, allowed: ["name", "bundleID", "path", "action"], nullable: ["bundleID", "path", "action"], at: letter)
+                    if let action = binding["action"] as? [String: Any] {
+                        try shape(action, allowed: ["kind", "target"], nullable: ["target"], at: letter + ".action")
+                    }
+                }
+            }
+        }
     }
 
     static func export(_ config: Config, to url: URL) throws {

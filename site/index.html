@@ -106,7 +106,7 @@ footer strong{color:var(--ink)}
 <header class="topbar">
   <a class="brand" href="#"><img src="assets/icon.png" alt="" width="32" height="32"><span>Initials</span></a>
   <nav aria-label="主导航"><a href="#how">用法</a><a href="#settings">设置</a><a href="#install">安装</a><a href="#demo">看导览</a><a href="#help">问题</a><a class="language-switch" href="/en/index.html" lang="en">English</a></nav>
-  <a class="button small" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>下载 <span aria-hidden="true">↓</span></a>
+  <a class="button small" href="{{RELEASE_URL}}">下载 <span aria-hidden="true">↓</span></a>
 </header>
 
 <main>
@@ -116,7 +116,7 @@ footer strong{color:var(--ink)}
     <h1>按住右 ⌘，<br>按字母，<em>就到了。</em></h1>
     <p class="lead">给常用 app 各指定一个字母。<kbd>右⌘</kbd>+<kbd>M</kbd> 切到音乐，再按一次就隐藏。不用找 Dock，也不用在 ⌘Tab 里一个个翻。左边的 ⌘ 也能按住直达，或者快速按两下弹出字母面板，看一眼就知道按哪个。</p>
     <div class="hero-actions">
-      <a class="button" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>免费下载 Mac 版 <span aria-hidden="true">↓</span></a>
+      <a class="button" href="{{RELEASE_URL}}">免费下载 Mac 版 <span aria-hidden="true">↓</span></a>
       <a class="button ghost" href="#demo">先看视频导览</a>
     </div>
     <p class="fine">v{{VERSION}} · {{SIZE}} MB · macOS 14 或更新 · Apple Silicon<br>Developer ID 签名，已通过 Apple 公证</p>
@@ -234,7 +234,7 @@ initials preview g o r p --json</code></pre></div>
       <p>需要 macOS 14 或更新，Apple Silicon（M 系列）。</p>
     </div>
     <ol class="steps">
-      <li><span class="n">1</span><div><h3>下载并拖进“应用程序”</h3><p>打开下载的 DMG，把 Initials 拖到 Applications，然后从“应用程序”打开它。安装包已经过 Apple 公证，可以直接打开。</p></div></li>
+      <li><span class="n">1</span><div><h3>下载并拖进“应用程序”</h3><p>在 GitHub Release 页的 Assets 中下载 DMG。打开 DMG，把 Initials 拖到 Applications，然后从“应用程序”打开它。安装包已经过 Apple 公证，可以直接打开。</p></div></li>
       <li><span class="n">2</span><div><h3>允许“辅助功能”</h3><p>第一次打开会显示设置窗口。点 <strong>打开辅助功能设置…</strong>，在“系统设置 › 隐私与安全性 › 辅助功能”里打开 Initials 的开关。回到设置窗口，顶部变成 <strong>✓ 已授权辅助功能，正在工作</strong> 就好了，不用重启。</p><p>为什么需要它：Initials 要接到 ⌘ + 字母，并且不让这个按键再传给当前 app。它只看 ⌘ 和紧跟的字母，不记录、不保存你打的字。</p></div></li>
       <li><span class="n">3</span><div><h3>给字母指定 app</h3><p>点 <strong>添加…</strong> 选 app 并挑字母。已经在用 Hammerspoon rcmd 的，点 <strong>从 Hammerspoon 导入</strong>，确认好用之后再点 <strong>关闭 Hammerspoon rcmd</strong>，免得两边同时处理同一个键。</p></div></li>
     </ol>
@@ -317,7 +317,8 @@ initials tap off --side left       # 关掉双击左 ⌘</code></pre>
   <img src="assets/icon.png" alt="Initials 图标" width="84" height="84">
   <h2>给常用的 app 各分一个字母。</h2>
   <p>免费、开源，离线可用。</p>
-  <a class="button" href="downloads/Initials-{{VERSION}}-arm64.dmg" download>下载 v{{VERSION}} <span aria-hidden="true">↓</span></a>
+  <a class="button" href="{{RELEASE_URL}}">下载 v{{VERSION}} <span aria-hidden="true">↓</span></a>
+  <p class="fine">安装包与发行校验记录：<a href="{{RELEASE_URL}}">GitHub Release</a></p>
   <p class="fine">SHA-256：<code>{{SHA256}}</code></p>
 </section>
 </main>

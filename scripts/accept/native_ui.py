@@ -2,8 +2,12 @@
 """Exercise real AppKit settings and picker entirely inside a prohibited app process."""
 import json
 import os
+import plistlib
 from pathlib import Path
+import shutil
 import struct
+import subprocess
+import uuid
 from _common import ROOT, detail, ensure_build, isolated, run
 
 # Separate left letters: the left settings page then shows one more row ("same letters as right ⌘").
@@ -46,9 +50,20 @@ def main():
     out = Path(os.environ.get("SOP_OUT_DIR", str(ROOT / "perf/acceptance"))).resolve()
     out.mkdir(parents=True, exist_ok=True)
     with isolated() as (_, env):
-        run([gui, "--ui-self-test", out], env=env)
-        report = json.loads((out / "ui-self-test.json").read_text())
-        assert report["passed"] and report["checks"] and all(report["checks"].values())
+        test_app = Path(env["INITIALS_SUPPORT_DIR"]) / "Initials.app"
+        shutil.copytree(Path(gui).parents[2], test_app)
+        info = test_app / "Contents/Info.plist"
+        values = plistlib.loads(info.read_bytes())
+        identity = "cyou.tianli.initials.test." + uuid.uuid4().hex
+        values["CFBundleIdentifier"] = identity
+        info.write_bytes(plistlib.dumps(values))
+        subprocess.run(["codesign", "--force", "--sign", "-", str(test_app)], check=True, capture_output=True)
+        try:
+            run([test_app / "Contents/MacOS/Initials", "--ui-self-test", out], env=env)
+            report = json.loads((out / "ui-self-test.json").read_text())
+            assert report["passed"] and report["checks"] and all(report["checks"].values())
+        finally:
+            subprocess.run(["defaults", "delete", identity], capture_output=True)
     with isolated() as (_, env):
         snapshots = settings_snapshots(gui, out, env)
     detail("native_ui", "真实设置窗与字母面板离屏交互、刷新、保存和关闭全部通过；带标题栏的左右设置页快照无控件越界，左页随多出的一行变高；未启动键盘拦截。",

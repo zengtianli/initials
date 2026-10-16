@@ -15,6 +15,8 @@ from _common import run
 
 def exercise(cli, root, env, check):
     built = Path(cli).parents[3]               # verified app: outside the lifecycle test folder
+    identity = plistlib.loads((built / "Contents/Info.plist").read_bytes())["CFBundleIdentifier"]
+    assert identity.startswith("cyou.tianli.initials.test."), "Update tests require disposable preferences"
     lifecycle, cloud = root / "lifecycle", root / "cloud"
     inside = lifecycle / "apps/Initials.app"   # the only copy an isolated run may replace
     inside.parent.mkdir(parents=True)
@@ -22,9 +24,9 @@ def exercise(cli, root, env, check):
     # Both disposable versions need the same signing identity. A reused
     # Developer ID app otherwise correctly rejects the ad-hoc test update.
     run(["codesign", "--force", "--sign", "-", "--identifier", "cyou.tianli.initials.cli", inside / "Contents/Resources/bin/initials"])
-    run(["codesign", "--force", "--sign", "-", "--identifier", "cyou.tianli.initials", inside])
+    run(["codesign", "--force", "--sign", "-", "--identifier", identity, inside])
     inner = inside / "Contents/Resources/bin/initials"
-    feed = cloud / "TianliApps/Updates/cyou.tianli.initials/test"
+    feed = cloud / "TianliApps/Updates" / identity / "test"
     feed.mkdir(parents=True)
     target = {**env, "APP_LIFECYCLE_SUPPORT_DIR": str(lifecycle), "APP_LIFECYCLE_CLOUD_DIR": str(cloud)}
     info = plistlib.loads((built / "Contents/Info.plist").read_bytes())
@@ -54,12 +56,12 @@ def exercise(cli, root, env, check):
         plist = app / "Contents/Info.plist"
         plist.write_bytes(plistlib.dumps({**plistlib.loads(plist.read_bytes()), "CFBundleVersion": number}))
         run(["codesign", "--force", "--sign", "-", "--identifier", "cyou.tianli.initials.cli", app / "Contents/Resources/bin/initials"])
-        run(["codesign", "--force", "--sign", "-", "--identifier", "cyou.tianli.initials", app])
+        run(["codesign", "--force", "--sign", "-", "--identifier", identity, app])
         archive = feed / "Initials.zip"
         archive.unlink(missing_ok=True)
         run(["ditto", "-c", "-k", "--keepParent", app, archive])
         (feed / "release.json").write_text(json.dumps({
-            "bundle_id": "cyou.tianli.initials", "channel": "test", "version": version, "build": number,
+            "bundle_id": identity, "channel": "test", "version": version, "build": number,
             "filename": archive.name, "sha256": sha256 or hashlib.sha256(archive.read_bytes()).hexdigest(),
             "size_bytes": archive.stat().st_size}))
 

@@ -48,10 +48,12 @@ let commandTable: [(String, Command)] = [
     ("path", Command(usage: "initials path [--json]", about: "Print the config file path.")),
     ("version", Command(usage: "initials version [--json]", about: "Print the version of the Initials.app this command ships in.")),
     ("updates", Command(usage: "initials updates [--json]", about: "Check the actual release feed for a newer version (read only).")),
-    ("update", Command(usage: "initials update check [--json]\ninitials update install --yes [--dry-run] [--json]",
+    ("update", Command(usage: "initials update check [--json]\ninitials update install --yes [--dry-run] [--json]\ninitials update options [--auto-check on|off] [--interval 1..720] [--auto-download on|off] [--auto-install on|off] [--skip version/build|clear] [--remind 0..720] [--yes] [--dry-run] [--json]",
                        about: "check: what the window's Check for Updates reads. install --yes: the window's “Upgrade to the new version…”.",
                        details: """
                        check only reads the release record: current {version, build}, source, latest, update_available, state
+                       options reads or saves the window's automatic update controls; new automatic behaviors default off.
+                       --yes saves, --dry-run only previews; private test copies must use a .test. bundle identifier.
                        (update_available | up_to_date | ahead_of_channel), message, upgrade {in_app, button, how, download_url, command}.
                        install --yes takes the window's own path: it downloads the release, verifies its SHA256, app identity and
                        developer signature, asks a running Initials to quit, replaces the Initials.app this command ships in and
@@ -418,17 +420,18 @@ func runningCopies(of app: URL) -> [Int32] {
 /// this command ships in and the window's own update source.
 func runUpdate() -> Never {
     let raw = Array(CommandLine.arguments.dropFirst())
-    let words = raw.filter { !$0.hasPrefix("-") }, options = raw.filter { $0.hasPrefix("-") }
-    // Only the words are judged here, so the usage shown is this product's; the options are the shared layer's.
-    guard words.count == 2, words[0] == "update", ["check", "install"].contains(words[1]) else {
-        updateFailure("usage", "usage: initials update check [--json] | initials update install --yes [--dry-run] [--json]", exit: 2)
+    guard raw.count >= 2, raw[0] == "update", ["check", "install", "options"].contains(raw[1]) else {
+        updateFailure("usage", "usage: initials update check | install --yes | options [--yes] [--json]", exit: 2)
     }
-    let sub = words[1], command = "update " + sub
-    guard let contents = hostContents, hostInfo["CFBundleIdentifier"] as? String == InitialsUpdates.bundleID,
-          let bundle = Bundle(url: contents.deletingLastPathComponent()) else {
+    let sub = raw[1], command = "update " + sub, options = Array(raw.dropFirst(2))
+    guard let contents = hostContents, let bundle = Bundle(url: contents.deletingLastPathComponent()),
+          bundle.bundleIdentifier == InitialsUpdates.bundleID || InitialsUpdates.isTestBundle(bundle) else {
         updateFailure("failed", "update needs the initials command inside Initials.app (Contents/Resources/bin)", exit: 1, command: command)
     }
     if InitialsUpdates.isolated {
+        guard InitialsUpdates.isTestBundle(bundle) else {
+            updateFailure("isolated_preferences", "isolated update commands require a private .test. bundle identity; support directories alone do not isolate UserDefaults", exit: 1, command: command)
+        }
         // The shared layer's own isolation: a test feed only, no relaunch, backup and retired copy inside the test folder.
         if (ProcessInfo.processInfo.environment["APP_LIFECYCLE_SUPPORT_DIR"] ?? "").isEmpty {
             setenv("APP_LIFECYCLE_SUPPORT_DIR", Paths.supportDirectory.appendingPathComponent("lifecycle").path, 1)
@@ -445,6 +448,7 @@ func runUpdate() -> Never {
     var product = AppLifecycleCLI.Product(command: "initials", name: "Initials", configuration: nil, updateSource: InitialsUpdates.source)
     product.bundle = bundle
     product.runningApp = { runningCopies(of: bundle.bundleURL) }
+    product.canInstallUpdate = { RuntimeStatus.live()?.updateBusy != true }
     exit(AppLifecycleCLI.run(["update", sub] + options, product: product))
 }
 

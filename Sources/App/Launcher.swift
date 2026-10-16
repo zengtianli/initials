@@ -9,6 +9,10 @@ enum Launcher {
     /// Isolated acceptance observes the actual resolved dispatch, without opening other apps.
     static var onResolved: ((ResolvedAction) -> Void)?
     static var onActionError: ((String) -> Void)?
+    private(set) static var pendingWork = 0
+    static var onWorkChange: (() -> Void)?
+    private static func beginWork() { pendingWork += 1; onWorkChange?() }
+    private static func endWork() { pendingWork -= 1; onWorkChange?() }
 
     static func perform(letter: String, side: Side, config: Config) {
         let action = decide(letter: letter, bindings: config.bindings(for: side), options: config.side(side),
@@ -25,13 +29,16 @@ enum Launcher {
         case .nothing:
             break
         case .execute(let action):
+            beginWork()
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
                     let resolved = try ActionResolver.resolve(action)
                     DispatchQueue.main.async {
+                        defer { endWork() }
                         if let observer = onResolved { observer(resolved) } else { execute(resolved) }
                     }
                 } catch { DispatchQueue.main.async {
+                    defer { endWork() }
                     if let observer = onActionError { observer(error.localizedDescription) } else { ActionFeedback.show(error.localizedDescription) }
                 } }
             }
@@ -55,25 +62,44 @@ enum Launcher {
             if !NSWorkspace.shared.open(url) { ActionFeedback.show(T("无法打开：", "Could not open: ") + action.target) }
         case .reveal(let url): NSWorkspace.shared.activateFileViewerSelecting([url])
         case .shortcut(let name):
+            #if APP_STORE
+            // The App Sandbox cannot run /usr/bin/shortcuts; the Shortcuts app's own URL runs it by name.
+            var link = URLComponents()
+            link.scheme = "shortcuts"
+            link.host = "run-shortcut"
+            link.queryItems = [URLQueryItem(name: "name", value: name)]
+            guard let url = link.url else { ActionFeedback.show(T("快捷指令名称无效：", "Invalid shortcut name: ") + name); return }
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = false
+            NSWorkspace.shared.open(url, configuration: configuration) { _, error in
+                if error != nil { DispatchQueue.main.async { ActionFeedback.show(T("快捷指令未能运行：", "The shortcut could not be run: ") + name) } }
+            }
+            #else
             let task = Process()
             task.executableURL = URL(fileURLWithPath: "/usr/bin/shortcuts")
             task.arguments = ["run", name]
             task.standardOutput = FileHandle.nullDevice
             task.standardError = FileHandle.nullDevice
             task.terminationHandler = { task in
-                if task.terminationStatus != 0 { DispatchQueue.main.async { ActionFeedback.show(T("快捷指令未能完成：", "The shortcut did not complete: ") + name) } }
+                DispatchQueue.main.async {
+                    endWork()
+                    if task.terminationStatus != 0 { ActionFeedback.show(T("快捷指令未能完成：", "The shortcut did not complete: ") + name) }
+                }
             }
-            do { try task.run() } catch { ActionFeedback.show(error.localizedDescription) }
+            beginWork()
+            do { try task.run() } catch { endWork(); ActionFeedback.show(error.localizedDescription) }
+            #endif
         }
     }
 
     /// Opening the bundle works whether or not the app runs, and macOS grants
     /// activation to it (a plain `activate()` from a background agent may be refused).
     private static func open(_ url: URL) {
+        beginWork()
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
         NSWorkspace.shared.openApplication(at: url, configuration: configuration) { _, error in
-            if error != nil { DispatchQueue.main.async { NSSound.beep() } }
+            DispatchQueue.main.async { endWork(); if error != nil { NSSound.beep() } }
         }
     }
 }

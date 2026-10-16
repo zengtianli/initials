@@ -9,8 +9,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     var onChange: ((Config) -> Void)?
     var onRequestTrust: (() -> Void)?
     var isTapRunning: () -> Bool = { false }
+    #if !APP_STORE
     var onSyncChange: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
+    #endif
 
     private(set) var config: Config
     private var side: Side = .right
@@ -30,16 +32,20 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     private let tableScroll = NSScrollView()
     private let addButton = NSButton()
     private let removeButton = NSButton()
-    private let importButton = NSButton()
     private let exportConfigButton = NSButton()
     private let importConfigButton = NSButton()
+    private let permissionLabel = NSTextField(labelWithString: "")
+    private let permissionButton = NSButton()
+    // Not in the Mac App Store build: Hammerspoon import and rcmd switch (files outside the App Sandbox),
+    // iCloud Drive sync (same) and the update check (the App Store updates it).
+    #if !APP_STORE
+    private let importButton = NSButton()
     private let checkUpdatesButton = NSButton()
     private let syncCheck = NSButton(checkboxWithTitle: T("通过 iCloud Drive 自动同步配置", "Sync settings automatically with iCloud Drive"), target: nil, action: nil)
     private let syncLabel = NSTextField(wrappingLabelWithString: "")
-    private let permissionLabel = NSTextField(labelWithString: "")
-    private let permissionButton = NSButton()
     private let hammerspoonLabel = NSTextField(wrappingLabelWithString: "")
     private let hammerspoonButton = NSButton()
+    #endif
     private let loginCheck = NSButton(checkboxWithTitle: T("登录时打开 Initials", "Open Initials at login"), target: nil, action: nil)
     private let message = NSTextField(labelWithString: "")
 
@@ -77,7 +83,9 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
 
     // MARK: Layout
 
+    #if !APP_STORE
     @objc private func checkUpdates() { onCheckForUpdates?() }
+    #endif
 
     private func build() {
         guard let content = window?.contentView else { return }
@@ -123,41 +131,51 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         addButton.keyEquivalent = "n"
         addButton.keyEquivalentModifierMask = .command
         configure(removeButton, T("移除", "Remove"), #selector(removeBinding))
-        configure(importButton, T("从 Hammerspoon 导入", "Import from Hammerspoon"), #selector(importHammerspoon))
         configure(exportConfigButton, T("导出配置…", "Export Settings…"), #selector(exportConfigFile))
         configure(importConfigButton, T("导入配置…", "Import Settings…"), #selector(importConfigFile))
+        configure(permissionButton, T("打开辅助功能设置…", "Open Accessibility Settings…"), #selector(openAccessibility))
+        permissionLabel.font = .systemFont(ofSize: 13, weight: .medium)
+        message.font = .systemFont(ofSize: 12)
+        message.textColor = .secondaryLabelColor
+        message.lineBreakMode = .byTruncatingTail
+        let permissionRow = NSStackView(views: [permissionLabel, spacer(), permissionButton])
+        let footer = NSStackView(views: [loginCheck, spacer(), message])
+        #if APP_STORE
+        let buttons = NSStackView(views: [addButton, removeButton, spacer()])
+        let transferRow = NSStackView(views: [exportConfigButton, importConfigButton, spacer()])
+        let rows: [NSView] = [permissionRow, separator(), sidePicker, sideNote, holdCheck, tapCheck, shareCheck,
+                              conflictLabel, tableScroll, buttons, hideCheck, cycleCheck, separator(),
+                              transferRow, separator(), footer]
+        let fullWidth: [NSView] = [permissionRow, tableScroll, buttons, footer, sideNote, conflictLabel, transferRow]
+        #else
+        configure(importButton, T("从 Hammerspoon 导入", "Import from Hammerspoon"), #selector(importHammerspoon))
         configure(checkUpdatesButton, T("检查更新…", "Check for Updates…"), #selector(checkUpdates))
         syncCheck.target = self
         syncCheck.action = #selector(toggleSync)
         syncLabel.font = .systemFont(ofSize: 12)
         syncLabel.textColor = .secondaryLabelColor
         refreshSyncStatus()
-        configure(permissionButton, T("打开辅助功能设置…", "Open Accessibility Settings…"), #selector(openAccessibility))
         configure(hammerspoonButton, "", #selector(toggleHammerspoon))
-        permissionLabel.font = .systemFont(ofSize: 13, weight: .medium)
         hammerspoonLabel.font = .systemFont(ofSize: 12)
         hammerspoonLabel.textColor = .secondaryLabelColor
-        message.font = .systemFont(ofSize: 12)
-        message.textColor = .secondaryLabelColor
-        message.lineBreakMode = .byTruncatingTail
-
-        let permissionRow = NSStackView(views: [permissionLabel, spacer(), permissionButton])
         let hammerspoonRow = NSStackView(views: [hammerspoonLabel, hammerspoonButton])
         hammerspoonRow.alignment = .centerY
         let buttons = NSStackView(views: [addButton, removeButton, spacer(), importButton])
-        let footer = NSStackView(views: [loginCheck, spacer(), message])
         let transferRow = NSStackView(views: [exportConfigButton, importConfigButton, spacer(), checkUpdatesButton])
+        let rows: [NSView] = [permissionRow, hammerspoonRow, separator(), sidePicker, sideNote, holdCheck, tapCheck, shareCheck,
+                              conflictLabel, tableScroll, buttons, hideCheck, cycleCheck, separator(),
+                              syncCheck, syncLabel, transferRow, separator(), footer]
+        let fullWidth: [NSView] = [permissionRow, hammerspoonRow, tableScroll, buttons, footer, sideNote, conflictLabel, syncLabel, transferRow]
+        #endif
 
-        let stack = NSStackView(views: [permissionRow, hammerspoonRow, separator(), sidePicker, sideNote, holdCheck, tapCheck, shareCheck,
-                                        conflictLabel, tableScroll, buttons, hideCheck, cycleCheck, separator(),
-                                        syncCheck, syncLabel, transferRow, separator(), footer])
+        let stack = NSStackView(views: rows)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
         stack.setCustomSpacing(4, after: sidePicker)
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)
-        for view in [permissionRow, hammerspoonRow, tableScroll, buttons, footer, sideNote, conflictLabel, syncLabel, transferRow] {
+        for view in fullWidth {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
         for view in stack.arrangedSubviews where view is NSBox {
@@ -220,8 +238,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         let editable = config.bindingsEditable(side)
         addButton.isEnabled = editable
         removeButton.isEnabled = editable
+        #if !APP_STORE
         importButton.isEnabled = editable && FileManager.default.fileExists(atPath: Hammerspoon.keymaps.path)
         importButton.isHidden = !FileManager.default.fileExists(atPath: Hammerspoon.keymaps.path)
+        #endif
         table.isEnabled = editable
         letters = config.bindings(for: side).keys.sorted()
         table.reloadData()
@@ -252,6 +272,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             : T("⚠︎ 需要授权“辅助功能”才能接收 ⌘ 按键", "⚠︎ Allow Accessibility so Initials can receive ⌘ keys")
         permissionLabel.textColor = trusted ? .systemGreen : .systemOrange
         permissionButton.isHidden = trusted
+        #if !APP_STORE
         // Only an older MacKit still has an rcmd module to switch off.
         let hasRcmd = FileManager.default.fileExists(atPath: Hammerspoon.mackitConfigDirectory.path) && Hammerspoon.rcmdInstalled
         let rcmdOn = Hammerspoon.rcmdEnabled
@@ -262,6 +283,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             : T("Hammerspoon 的 rcmd 已关闭，由 Initials 处理。", "Hammerspoon's rcmd is off; Initials handles the keys.")
         hammerspoonButton.title = rcmdOn ? T("关闭 Hammerspoon rcmd", "Turn off Hammerspoon rcmd")
                                          : T("恢复 Hammerspoon rcmd", "Restore Hammerspoon rcmd")
+        #endif
         fitWindow()
     }
 
@@ -278,6 +300,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
 
     // MARK: Actions
 
+    #if !APP_STORE
     func refreshSyncStatus(_ note: String = "") {
         syncCheck.state = (try? CloudSyncStore.preferences().enabled) == true ? .on : .off
         syncLabel.stringValue = note.isEmpty
@@ -296,6 +319,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
             onSyncChange?()
         } catch { message.stringValue = error.localizedDescription; refreshSyncStatus() }
     }
+    #endif
 
     /// The file panels and offscreen acceptance use these exact same operations.
     func exportConfiguration(to url: URL) throws {
@@ -404,6 +428,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         reload()
     }
 
+    #if !APP_STORE
     @objc private func importHammerspoon() {
         do {
             let imported = try Hammerspoon.importLetters()
@@ -426,6 +451,7 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         }
         refreshStatus()
     }
+    #endif
 
     @objc private func openAccessibility() {
         onRequestTrust?()
@@ -517,11 +543,13 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         checks["settings_right_controls_in_bounds"] = try snapshotSelfTestContent(to: directory.appendingPathComponent("settings-right.png"))
         checks["settings_transfer_controls"] = exportConfigButton.isEnabled && importConfigButton.isEnabled
             && exportConfigButton.action == #selector(exportConfigFile) && importConfigButton.action == #selector(importConfigFile)
+        #if !APP_STORE
         var updateRequests = 0
         onCheckForUpdates = { updateRequests += 1 }
         checkUpdates()
         checks["settings_check_updates_action"] = checkUpdatesButton.isEnabled
             && checkUpdatesButton.action == #selector(checkUpdates) && updateRequests == 1
+        #endif
         let exported = directory.appendingPathComponent("Initials-config.json")
         let before = config
         try exportConfiguration(to: exported)
@@ -540,7 +568,9 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         try Data("{}".utf8).write(to: source)
         do { try importConfiguration(from: source); checks["settings_import_rejects_unrelated_json"] = false }
         catch { checks["settings_import_rejects_unrelated_json"] = config == replacement && callbackCount == 2 }
+        #if !APP_STORE
         checks["settings_sync_control"] = syncCheck.action == #selector(toggleSync) && syncCheck.isEnabled
+        #endif
         checks.merge(try BindingEditor(bindings: [:]).checkOffscreen(to: directory)) { _, value in value }
         try saveBinding(try LetterAction(kind: .showDownloads).binding, to: "g", on: .right)
         let actionDisk = try ConfigStore.load()
@@ -557,7 +587,9 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     /// after a taller settings state. Render the actual content at its fitted size.
     private func snapshotSelfTestContent(to url: URL) throws -> Bool {
         window?.appearance = NSAppearance(named: .aqua)
+        #if !APP_STORE
         hammerspoonLabel.superview?.isHidden = true
+        #endif
         guard let content = window?.contentView else { return false }
         // Content alone has no NSThemeFrame to paint the light window background.
         content.wantsLayer = true
@@ -567,7 +599,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         content.layoutSubtreeIfNeeded()
         var controls: [NSView] = [permissionLabel, sidePicker, sideNote, holdCheck, tapCheck,
                                    tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck,
-                                   syncCheck, syncLabel, exportConfigButton, importConfigButton, checkUpdatesButton]
+                                   exportConfigButton, importConfigButton]
+        #if !APP_STORE
+        controls += [syncCheck, syncLabel, checkUpdatesButton]
+        #endif
         if !shareCheck.isHidden { controls.append(shareCheck) }
         if !conflictLabel.isHidden { controls.append(conflictLabel) }
         let visible = controls.allSatisfy { control in
@@ -581,8 +616,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
     func snapshot(side: Side, to url: URL, appearance: NSAppearance?) throws {
         window?.appearance = appearance
         selectSide(side)
+        #if !APP_STORE
         // Docs show the product, not this Mac's Hammerspoon state.
         hammerspoonLabel.superview?.isHidden = true
+        #endif
         fitWindow()
         // The frame view includes the title bar and window buttons.
         guard let window, let content = window.contentView else { return }
@@ -591,7 +628,10 @@ final class SettingsWindowController: NSWindowController, NSTableViewDataSource,
         // Fail rather than publish a clipped render: every control must sit inside the content area.
         var controls: [NSView] = [permissionLabel, sidePicker, sideNote, holdCheck, tapCheck,
                                   tableScroll, addButton, removeButton, hideCheck, cycleCheck, loginCheck,
-                                  syncCheck, syncLabel, exportConfigButton, importConfigButton, checkUpdatesButton]
+                                  exportConfigButton, importConfigButton]
+        #if !APP_STORE
+        controls += [syncCheck, syncLabel, checkUpdatesButton]
+        #endif
         if !shareCheck.isHidden { controls.append(shareCheck) }
         if !conflictLabel.isHidden { controls.append(conflictLabel) }
         let area = view.convert(window.contentLayoutRect, from: nil).insetBy(dx: -1, dy: -1)

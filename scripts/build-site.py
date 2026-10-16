@@ -17,7 +17,26 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parent / "apps-portal/site"))
 from perf_block import load as load_perf, measurement_description, standalone_section, summarize
 ORIGIN = "https://initials.tianli.cyou"
+REPOSITORY = "https://github.com/zengtianli/initials"
 CJK = re.compile(r"[\u4e00-\u9fff]")
+
+
+def release_links(release):
+    """Use the original release record for both the human page and updater asset."""
+    version, filename = release["version"], release["filename"]
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        raise SystemExit("Invalid version in build/release.json")
+    if filename != f"Initials-{version}-arm64.dmg":
+        raise SystemExit("Release filename does not identify this version's Initials package")
+    return {"release_url": f"{REPOSITORY}/releases/tag/v{version}",
+            "download_url": f"{REPOSITORY}/releases/download/v{version}/{filename}"}
+
+
+def assert_package_free(out):
+    for path in out.rglob("*"):
+        if (path.suffix.lower() in (".dmg", ".pkg", ".app")
+                or re.fullmatch(r"Initials-v?[0-9].*\.zip", path.name, re.IGNORECASE)):
+            raise SystemExit(f"Installers belong on GitHub Release, not the site: {path.relative_to(out)}")
 
 
 def performance_reuse(raw, release):
@@ -171,6 +190,7 @@ class EnglishPage(HTMLParser):
 
 def main():
     release = json.loads((ROOT / "build/release.json").read_text())
+    links = release_links(release)
     perf = load_perf({"repo": str(ROOT)})
     if not perf:
         raise SystemExit("perf/lightweight.json is required")
@@ -187,22 +207,20 @@ def main():
     if out.exists():
         shutil.rmtree(out)
     shutil.copytree(ROOT / "site", out, ignore=shutil.ignore_patterns("locales"))
-    (out / "downloads").mkdir()
-    shutil.copy2(dmg, out / "downloads" / dmg.name)
-    (out / "downloads/SHA256SUMS.txt").write_text(f"{release['sha256']}  {dmg.name}\n")
+    assert_package_free(out)
     public_release = {"version": release["version"], "build": str(release["build"]),
-                      "filename": dmg.name, "download": f"downloads/{dmg.name}",
+                      "filename": dmg.name, "download": links["download_url"],
+                      "release_url": links["release_url"], "repository": REPOSITORY,
                       "bytes": release["size_bytes"], "sha256": release["sha256"]}
-    (out / "downloads/release-manifest.json").write_text(
+    (out / "release.json").write_text(
         json.dumps(public_release, ensure_ascii=False, indent=2) + "\n")
     updates = {"bundle_id": "cyou.tianli.initials", "version": release["version"],
                "build": str(release["build"]), "channel": "public", "sha256": release["sha256"],
                "size_bytes": release["size_bytes"], "installation": "bundle",
-               "download_url": f"{ORIGIN}/downloads/{dmg.name}",
-               "release_url": f"https://github.com/zengtianli/initials/releases/tag/v{release['version']}"}
+               "download_url": links["download_url"], "release_url": links["release_url"]}
     (out / "updates.json").write_text(json.dumps(updates, ensure_ascii=False, indent=2) + "\n")
     source = (ROOT / "site/index.html").read_text()
-    source = re.sub(r'(src|href|poster)="(assets|media|downloads)/', r'\1="/\2/', source)
+    source = re.sub(r'(src|href|poster)="(assets|media)/', r'\1="/\2/', source)
     parser = EnglishPage(json.loads((ROOT / "site/locales/en.json").read_text()))
     parser.feed(source)
     parser.close()
@@ -212,7 +230,8 @@ def main():
         destination = out / filename
         destination.parent.mkdir(parents=True, exist_ok=True)
         values = {"VERSION": release["version"], "SIZE": f"{release['size_bytes'] / 1_000_000:.1f}",
-                  "SHA256": release["sha256"], "LANG": lang, "CANONICAL": canonical,
+                  "SHA256": release["sha256"], "RELEASE_URL": links["release_url"],
+                  "LANG": lang, "CANONICAL": canonical,
                   "OG_LOCALE": og_locale,
                   "LW_MEMORY": perf["memory"] or ("未测" if lang == "zh-CN" else "Unmeasured"),
                   "LIGHTWEIGHT": lightweight_section(raw_perf, release, reuse, "zh" if lang == "zh-CN" else "en")}
@@ -225,7 +244,7 @@ def main():
     # Future HTML files share release substitution and the completeness gate.
     for destination in out.rglob("*.html"):
         page = destination.read_text()
-        for key in ("VERSION", "SIZE", "SHA256"):
+        for key in ("VERSION", "SIZE", "SHA256", "RELEASE_URL"):
             page = page.replace("{{" + key + "}}", values[key])
         if "{{" in page:
             raise SystemExit(f"Unfilled placeholder in {destination.relative_to(out)}")

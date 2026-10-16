@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live readback after scripts/deploy-site.sh swaps the new tree in: pages byte for byte, release DMG by SHA256.
+"""Live readback after scripts/deploy-site.sh swaps the new tree in: pages and release metadata byte for byte.
 
 A response body cut off mid-transfer (http.client.IncompleteRead: the server announced more bytes than arrived)
 says nothing about what is deployed, so that one request is fetched once more. Nothing else is retried: an HTTP
@@ -28,7 +28,8 @@ ROOT = Path(__file__).resolve().parents[1]
 ORIGIN = 'https://initials.tianli.cyou'
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36'
 ATTEMPTS = 2  # the first GET plus one refetch, for a truncated body only
-PAGES = [('/', 'index.html'), ('/en/', 'en/index.html'), ('/updates.json', 'updates.json')]
+PAGES = [('/', 'index.html'), ('/en/', 'en/index.html'), ('/updates.json', 'updates.json'),
+         ('/release.json', 'release.json')]
 
 
 def fetch(url, timeout):
@@ -36,7 +37,7 @@ def fetch(url, timeout):
 
     The request does not ask the server to close the connection (urllib always sends `Connection: close`):
     on a tunnelled route the tail of a large body is lost when the server closes right behind it, which read
-    as a truncated DMG although the deployed file was whole. Browsers and the app's updater keep the connection
+    as a truncated file although the deployed file was whole. Browsers and the app's updater keep the connection
     open too. No redirect is followed; anything but 200 is an HTTP error.
     """
     parts = urllib.parse.urlsplit(url)
@@ -77,9 +78,6 @@ def verify(origin, site, release, evidence, timeout=30):
         body = read(origin + path + '?release=' + release['version'], evidence, timeout)
         if body != (site / local).read_bytes():
             raise RuntimeError('Deployed page differs: ' + path)
-    body = read(origin + '/downloads/' + release['filename'] + '?release=' + release['version'], evidence, timeout)
-    if hashlib.sha256(body).hexdigest() != release['sha256']:
-        raise RuntimeError('Deployed DMG differs from build/release.json sha256')
 
 
 def run(origin, site, release, out, timeout=30):
@@ -97,16 +95,14 @@ def run(origin, site, release, out, timeout=30):
 
 
 def self_test():
-    """Real HTTP against a local server: the DMG response is truncated, missing or altered on purpose."""
+    """Real HTTP: release metadata is truncated, missing or altered; no site installer is served."""
     with tempfile.TemporaryDirectory(prefix='initials-verify-') as temp:
         site = Path(temp) / 'site'
         (site / 'en').mkdir(parents=True)
-        (site / 'downloads').mkdir()
         for _, local in PAGES:
             (site / local).write_text('page ' + local)
-        dmg = bytes(range(256)) * 4096
-        (site / 'downloads/Initials-test.dmg').write_bytes(dmg)
-        release = {'version': '0.0.0', 'filename': 'Initials-test.dmg', 'sha256': hashlib.sha256(dmg).hexdigest()}
+        (site / 'release.json').write_text(json.dumps({'version': '0.0.0', 'description': 'record ' * 10000}))
+        release = {'version': '0.0.0'}
         plan = {'truncate': 0, 'status': 200, 'alter': False, 'served': 0, 'close_asked': 0}
 
         class Handler(http.server.BaseHTTPRequestHandler):
@@ -119,8 +115,8 @@ def self_test():
                 path = self.path.split('?')[0]
                 local = site / (path.lstrip('/') + ('index.html' if path.endswith('/') else ''))
                 body = local.read_bytes()
-                is_dmg = path.endswith('.dmg')
-                if is_dmg:
+                is_release = path == '/release.json'
+                if is_release:
                     plan['served'] += 1
                     if plan['status'] != 200:
                         self.send_error(plan['status'])
@@ -130,7 +126,7 @@ def self_test():
                 self.send_response(200)
                 self.send_header('Content-Length', str(len(body)))
                 self.end_headers()
-                if is_dmg and plan['truncate'] > 0:
+                if is_release and plan['truncate'] > 0:
                     plan['truncate'] -= 1
                     self.wfile.write(body[:len(body) // 2])  # announce everything, send half, close
                     self.wfile.flush()
@@ -141,7 +137,7 @@ def self_test():
         server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         origin = f'http://127.0.0.1:{server.server_address[1]}'
-        cases = [  # name, truncations, status, altered, expected ok, expected DMG attempts
+        cases = [  # name, truncations, status, altered, expected ok, expected metadata attempts
             ('complete_first_time', 0, 200, False, True, ['complete']),
             ('truncated_once_then_complete', 1, 200, False, True, ['truncated', 'complete']),
             ('truncated_twice', 2, 200, False, False, ['truncated', 'truncated']),
@@ -157,8 +153,8 @@ def self_test():
                 passed = (report['ok'] is expected_ok and attempts == expected_attempts
                           and plan['served'] == len(expected_attempts) and plan['close_asked'] == 0)
                 ok = ok and passed
-                results.append({'case': name, 'passed': passed, 'verified': report['ok'], 'dmg_attempts': attempts,
-                                'dmg_requests_served': plan['served'],
+                results.append({'case': name, 'passed': passed, 'verified': report['ok'], 'release_attempts': attempts,
+                                'release_requests_served': plan['served'],
                                 'requests_asking_to_close': plan['close_asked'], 'failure': report['failure']})
         finally:
             server.shutdown()
@@ -181,7 +177,7 @@ def main():
     if not report['ok']:
         print('Verification failed: ' + report['failure'], file=sys.stderr)
         return 1
-    print('Live Chinese/English pages and release DMG verified:', release['version'],
+    print('Live Chinese/English pages and GitHub release metadata verified:', release['version'],
           f"({report['refetched']} request(s) refetched after a truncated body; evidence {args.evidence})")
     return 0
 
